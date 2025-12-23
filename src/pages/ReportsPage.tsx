@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen } from 'lucide-react';
+import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/collapsible';
 import { StarRating } from '@/components/ui/StarRating';
 import { toast } from 'sonner';
-import type { StudentReport, ReportEntry, Subject } from '@/types';
+import type { StudentReport, ReportEntry, SubjectComment } from '@/types';
 
 const reportFormSchema = z.object({
   studentId: z.string().min(1, 'Please select a student'),
@@ -51,12 +51,21 @@ const reportFormSchema = z.object({
 
 type ReportFormValues = z.infer<typeof reportFormSchema>;
 
-// Separate state for entries since they're dynamic
+// State for entries
 interface EntryState {
   [key: string]: {
     stars: number;
     teacherNotes: string;
     aiRewrittenText: string;
+  };
+}
+
+// State for subject comments
+interface SubjectCommentState {
+  [subjectId: string]: {
+    teacherComment: string;
+    aiRewrittenComment: string;
+    attitudeTowardsLearning: 'Emerging' | 'Developing' | 'Applying' | 'Independent' | '';
   };
 }
 
@@ -66,6 +75,9 @@ export default function ReportsPage() {
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('');
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
   const [entries, setEntries] = useState<EntryState>({});
+  const [subjectComments, setSubjectComments] = useState<SubjectCommentState>({});
+  const [generalComment, setGeneralComment] = useState('');
+  const [generalCommentAI, setGeneralCommentAI] = useState('');
 
   const {
     reports,
@@ -77,7 +89,9 @@ export default function ReportsPage() {
   } = useAppStore();
 
   const activeStudents = students.filter((s) => s.schoolYearId === activeSchoolYearId);
-  const activeAssessments = assessmentTemplates.filter((a) => a.schoolYearId === activeSchoolYearId);
+  const activeAssessments = assessmentTemplates.filter(
+    (a) => a.schoolYearId === activeSchoolYearId && !(a as any).isArchived
+  );
   const activeReports = reports.filter((r) => r.schoolYearId === activeSchoolYearId);
 
   const selectedStudent = activeStudents.find((s) => s.id === selectedStudentId);
@@ -107,6 +121,11 @@ export default function ReportsPage() {
   const handleStudentChange = (studentId: string) => {
     setSelectedStudentId(studentId);
     form.setValue('studentId', studentId);
+    // Reset assessment when student changes
+    setSelectedAssessmentId('');
+    form.setValue('assessmentTemplateId', '');
+    setEntries({});
+    setSubjectComments({});
   };
 
   const handleAssessmentChange = (assessmentId: string) => {
@@ -115,21 +134,36 @@ export default function ReportsPage() {
     
     const assessment = activeAssessments.find((a) => a.id === assessmentId);
     if (assessment) {
-      // Initialize entries for each assessment point across all subjects
+      // Initialize entries for each assessment point - START WITH MAX STARS!
       const newEntries: EntryState = {};
+      const newSubjectComments: SubjectCommentState = {};
+      const expandedIds = new Set<string>();
+      
       assessment.subjects?.forEach((subject) => {
+        // Initialize subject comments
+        newSubjectComments[subject.id] = {
+          teacherComment: '',
+          aiRewrittenComment: '',
+          attitudeTowardsLearning: '',
+        };
+        
         subject.assessmentPoints?.forEach((point) => {
           const key = `${subject.id}:${point.id}`;
           newEntries[key] = {
-            stars: 0,
+            stars: point.maxStars, // START FULL!
             teacherNotes: '',
             aiRewrittenText: '',
           };
         });
-        // Expand all subjects by default
-        setExpandedSubjects((prev) => new Set([...prev, subject.id]));
+        // Expand first subject by default
+        if (expandedIds.size === 0) {
+          expandedIds.add(subject.id);
+        }
       });
+      
       setEntries(newEntries);
+      setSubjectComments(newSubjectComments);
+      setExpandedSubjects(expandedIds);
     }
   };
 
@@ -144,10 +178,27 @@ export default function ReportsPage() {
     }));
   };
 
+  const updateSubjectComment = (
+    subjectId: string,
+    field: keyof SubjectCommentState[string],
+    value: string
+  ) => {
+    setSubjectComments((prev) => ({
+      ...prev,
+      [subjectId]: {
+        ...prev[subjectId],
+        [field]: value,
+      },
+    }));
+  };
+
   const openCreateDialog = () => {
     setSelectedStudentId('');
     setSelectedAssessmentId('');
     setEntries({});
+    setSubjectComments({});
+    setGeneralComment('');
+    setGeneralCommentAI('');
     setExpandedSubjects(new Set());
     form.reset({
       studentId: '',
@@ -157,16 +208,16 @@ export default function ReportsPage() {
     setIsDialogOpen(true);
   };
 
-  const simulateAIRewrite = (text: string, subjectId: string, pointId: string) => {
+  const simulateAIRewrite = (text: string, callback: (rewritten: string) => void) => {
     if (!text.trim()) {
-      toast.error('Please enter some notes first');
+      toast.error('Please enter some text first');
       return;
     }
 
     // Simulate AI rewrite (placeholder for actual AI integration)
-    const tisaVoice = `${text.charAt(0).toUpperCase()}${text.slice(1)}. The student shows consistent effort and demonstrates a positive attitude towards learning. We encourage continued practice at home.`;
+    const tisaVoice = `${text.charAt(0).toUpperCase()}${text.slice(1)}. The student demonstrates consistent effort and maintains a positive attitude towards learning. We encourage continued practice at home to further develop these skills.`;
     
-    updateEntry(subjectId, pointId, 'aiRewrittenText', tisaVoice);
+    callback(tisaVoice);
     toast.success('Text rewritten in TISA voice!');
   };
 
@@ -183,6 +234,16 @@ export default function ReportsPage() {
       };
     });
 
+    // Convert subject comments to array
+    const subjectCommentArray: SubjectComment[] = Object.entries(subjectComments)
+      .filter(([_, value]) => value.teacherComment || value.attitudeTowardsLearning)
+      .map(([subjectId, value]) => ({
+        subjectId,
+        teacherComment: value.teacherComment,
+        aiRewrittenComment: value.aiRewrittenComment,
+        attitudeTowardsLearning: value.attitudeTowardsLearning || undefined,
+      }));
+
     const newReport: StudentReport = {
       id: crypto.randomUUID(),
       studentId: data.studentId,
@@ -190,6 +251,8 @@ export default function ReportsPage() {
       schoolYearId: activeSchoolYearId!,
       term: data.term,
       entries: entryArray,
+      subjectComments: subjectCommentArray,
+      generalComment: generalCommentAI || generalComment,
       status: 'draft',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -200,6 +263,9 @@ export default function ReportsPage() {
     setIsDialogOpen(false);
     form.reset();
     setEntries({});
+    setSubjectComments({});
+    setGeneralComment('');
+    setGeneralCommentAI('');
   };
 
   const getGradeInfo = (gradeId: string) => grades.find((g) => g.id === gradeId);
@@ -209,6 +275,9 @@ export default function ReportsPage() {
     : [];
 
   const hasEntries = Object.keys(entries).length > 0;
+
+  // Get intro text from template
+  const introText = selectedAssessment ? (selectedAssessment as any).introText : '';
 
   return (
     <AppLayout>
@@ -232,7 +301,7 @@ export default function ReportsPage() {
               <DialogHeader>
                 <DialogTitle>Create Student Report</DialogTitle>
                 <DialogDescription>
-                  Fill in star ratings and notes. Use AI to rewrite in TISA voice.
+                  All stars start at maximum. Click to reduce rating. Use AI to polish comments.
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
@@ -338,6 +407,15 @@ export default function ReportsPage() {
                     />
                   </div>
 
+                  {/* Intro Text Preview */}
+                  {introText && (
+                    <Card className="bg-primary/5 border-primary/20">
+                      <CardContent className="p-4">
+                        <p className="text-sm italic text-muted-foreground">{introText}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {/* Assessment Subjects & Points */}
                   {selectedAssessment && hasEntries && (
                     <div className="space-y-4">
@@ -377,6 +455,7 @@ export default function ReportsPage() {
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                             <div className="ml-4 mt-2 space-y-3 border-l-2 border-primary/20 pl-4">
+                              {/* Assessment Points */}
                               {subject.assessmentPoints?.map((point) => {
                                 const key = `${subject.id}:${point.id}`;
                                 const entry = entries[key];
@@ -394,7 +473,7 @@ export default function ReportsPage() {
                                             {point.name}
                                           </CardTitle>
                                           <StarRating
-                                            value={entry?.stars || 0}
+                                            value={entry?.stars || point.maxStars}
                                             max={point.maxStars}
                                             onChange={(val) => updateEntry(subject.id, point.id, 'stars', val)}
                                             size="md"
@@ -404,7 +483,7 @@ export default function ReportsPage() {
                                       <CardContent className="space-y-3">
                                         <div>
                                           <label className="mb-1.5 block text-sm text-muted-foreground">
-                                            Teacher Notes
+                                            Teacher Notes (optional)
                                           </label>
                                           <Textarea
                                             placeholder="Enter your observations..."
@@ -414,18 +493,23 @@ export default function ReportsPage() {
                                           />
                                         </div>
 
-                                        <div className="flex items-center gap-2">
-                                          <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            className="gap-2"
-                                            onClick={() => simulateAIRewrite(entry?.teacherNotes || '', subject.id, point.id)}
-                                          >
-                                            <Sparkles className="h-3.5 w-3.5 text-accent" />
-                                            Rewrite in TISA Voice
-                                          </Button>
-                                        </div>
+                                        {entry?.teacherNotes && (
+                                          <div className="flex items-center gap-2">
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="sm"
+                                              className="gap-2"
+                                              onClick={() => simulateAIRewrite(
+                                                entry.teacherNotes,
+                                                (rewritten) => updateEntry(subject.id, point.id, 'aiRewrittenText', rewritten)
+                                              )}
+                                            >
+                                              <Sparkles className="h-3.5 w-3.5 text-accent" />
+                                              AI Rewrite
+                                            </Button>
+                                          </div>
+                                        )}
 
                                         {entry?.aiRewrittenText && (
                                           <motion.div
@@ -434,7 +518,7 @@ export default function ReportsPage() {
                                           >
                                             <label className="mb-1.5 flex items-center gap-2 text-sm">
                                               <Sparkles className="h-3.5 w-3.5 text-accent" />
-                                              AI Rewritten (TISA Voice)
+                                              AI Polished
                                             </label>
                                             <Textarea
                                               className="min-h-[60px] bg-accent/5 border-accent/20"
@@ -448,10 +532,127 @@ export default function ReportsPage() {
                                   </motion.div>
                                 );
                               })}
+
+                              {/* Subject Comment Section */}
+                              <Card className="border-dashed bg-muted/30">
+                                <CardHeader className="pb-2">
+                                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                    <MessageSquare className="h-4 w-4" />
+                                    Subject Comment
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                  <div className="flex items-center gap-3">
+                                    <label className="text-sm text-muted-foreground shrink-0">
+                                      Attitude:
+                                    </label>
+                                    <Select
+                                      value={subjectComments[subject.id]?.attitudeTowardsLearning || ''}
+                                      onValueChange={(val) => updateSubjectComment(subject.id, 'attitudeTowardsLearning', val)}
+                                    >
+                                      <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="Select level" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Emerging">Emerging</SelectItem>
+                                        <SelectItem value="Developing">Developing</SelectItem>
+                                        <SelectItem value="Applying">Applying</SelectItem>
+                                        <SelectItem value="Independent">Independent</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  
+                                  <Textarea
+                                    placeholder="Overall comment for this subject..."
+                                    className="min-h-[80px]"
+                                    value={subjectComments[subject.id]?.teacherComment || ''}
+                                    onChange={(e) => updateSubjectComment(subject.id, 'teacherComment', e.target.value)}
+                                  />
+
+                                  {subjectComments[subject.id]?.teacherComment && (
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2"
+                                        onClick={() => simulateAIRewrite(
+                                          subjectComments[subject.id].teacherComment,
+                                          (rewritten) => updateSubjectComment(subject.id, 'aiRewrittenComment', rewritten)
+                                        )}
+                                      >
+                                        <Sparkles className="h-3.5 w-3.5 text-accent" />
+                                        AI Rewrite
+                                      </Button>
+                                    </div>
+                                  )}
+
+                                  {subjectComments[subject.id]?.aiRewrittenComment && (
+                                    <Textarea
+                                      className="min-h-[80px] bg-accent/5 border-accent/20"
+                                      value={subjectComments[subject.id].aiRewrittenComment}
+                                      onChange={(e) => updateSubjectComment(subject.id, 'aiRewrittenComment', e.target.value)}
+                                    />
+                                  )}
+                                </CardContent>
+                              </Card>
                             </div>
                           </CollapsibleContent>
                         </Collapsible>
                       ))}
+
+                      {/* General Comment */}
+                      <Card className="mt-6">
+                        <CardHeader>
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5" />
+                            General Comment
+                          </CardTitle>
+                          <CardDescription>
+                            Overall feedback for the student's report
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <Textarea
+                            placeholder="Write your overall feedback for the student..."
+                            className="min-h-[100px]"
+                            value={generalComment}
+                            onChange={(e) => setGeneralComment(e.target.value)}
+                          />
+
+                          {generalComment && (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="gap-2"
+                                onClick={() => simulateAIRewrite(generalComment, setGeneralCommentAI)}
+                              >
+                                <Sparkles className="h-3.5 w-3.5 text-accent" />
+                                AI Rewrite
+                              </Button>
+                            </div>
+                          )}
+
+                          {generalCommentAI && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                            >
+                              <label className="mb-1.5 flex items-center gap-2 text-sm">
+                                <Sparkles className="h-3.5 w-3.5 text-accent" />
+                                AI Polished Version
+                              </label>
+                              <Textarea
+                                className="min-h-[100px] bg-accent/5 border-accent/20"
+                                value={generalCommentAI}
+                                onChange={(e) => setGeneralCommentAI(e.target.value)}
+                              />
+                            </motion.div>
+                          )}
+                        </CardContent>
+                      </Card>
                     </div>
                   )}
 
@@ -459,6 +660,14 @@ export default function ReportsPage() {
                     <Card className="border-dashed">
                       <CardContent className="py-8 text-center text-muted-foreground">
                         Select an assessment to fill out the report
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {activeStudents.length === 0 && (
+                    <Card className="border-dashed border-destructive/50">
+                      <CardContent className="py-8 text-center text-muted-foreground">
+                        No students found. Add students in the Students page first.
                       </CardContent>
                     </Card>
                   )}
