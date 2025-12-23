@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star } from 'lucide-react';
+import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -833,22 +833,22 @@ export default function ReportsPage() {
 
               return (
                 <div className="bg-card">
-                  {/* TISA Purple Header Banner */}
-                  <div className="bg-tisa-purple text-white p-6 text-center">
-                    <div className="flex justify-center mb-4">
-                      <img src={tisaLogo} alt="TISA Logo" className="h-16 w-auto" />
-                    </div>
-                    <h1 className="font-display text-xl font-bold uppercase tracking-widest">
-                      {viewingReport.reportTitle || 'STUDENT PROGRESS REPORT'}
-                    </h1>
-                    <p className="text-white/90 font-medium mt-1">
-                      {viewingReport.term}
-                    </p>
-                    {(viewingReport.periodStart || viewingReport.periodEnd) && (
-                      <p className="text-white/80 text-sm mt-1">
-                        Period: {viewingReport.periodStart} - {viewingReport.periodEnd}
+                  {/* TISA Purple Header Banner - Horizontal Layout */}
+                  <div className="bg-tisa-purple text-white p-4 flex items-center justify-between">
+                    <div className="text-left">
+                      <h1 className="font-display text-xl font-bold uppercase tracking-widest">
+                        {viewingReport.reportTitle || 'STUDENT PROGRESS REPORT'}
+                      </h1>
+                      <p className="text-white/90 font-medium mt-1">
+                        {viewingReport.term}
                       </p>
-                    )}
+                      {(viewingReport.periodStart || viewingReport.periodEnd) && (
+                        <p className="text-white/80 text-sm mt-0.5">
+                          Period: {viewingReport.periodStart} - {viewingReport.periodEnd}
+                        </p>
+                      )}
+                    </div>
+                    <img src={tisaLogo} alt="TISA Logo" className="h-20 w-auto" />
                   </div>
 
                   <div className="p-6 space-y-6">
@@ -1062,7 +1062,29 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  <div className="border-t border-border p-4 bg-muted/30 flex justify-end">
+                  <div className="border-t border-border p-4 bg-muted/30 flex justify-between items-center">
+                    <Button 
+                      variant="outline" 
+                      className="gap-2"
+                      onClick={() => {
+                        const { updateReportShareToken } = useAppStore.getState();
+                        let token = viewingReport.shareToken;
+                        
+                        if (!token) {
+                          token = crypto.randomUUID();
+                          updateReportShareToken(viewingReport.id, token);
+                        }
+                        
+                        const shareUrl = `${window.location.origin}/report/${token}`;
+                        navigator.clipboard.writeText(shareUrl);
+                        toast.success('Link copied! Share this with parents', {
+                          description: shareUrl,
+                        });
+                      }}
+                    >
+                      <Link className="h-4 w-4" />
+                      {viewingReport.shareToken ? 'Copy Share Link' : 'Share with Parents'}
+                    </Button>
                     <Button variant="outline" onClick={() => setViewingReport(null)}>Close</Button>
                   </div>
                 </div>
