@@ -1,17 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Pencil, Trash2, ClipboardList, ChevronDown, ChevronRight, BookOpen } from 'lucide-react';
+import { Plus, Pencil, Archive, Copy, ClipboardList, ChevronDown, ChevronRight, BookOpen, ArchiveRestore } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAppStore } from '@/store/useAppStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -27,26 +20,35 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
-import type { AssessmentTemplate, Subject } from '@/types';
+import { Switch } from '@/components/ui/switch';
+import { AssessmentTemplateDialog } from '@/components/assessments/AssessmentTemplateDialog';
+import { DuplicateYearDialog } from '@/components/assessments/DuplicateYearDialog';
+import type { AssessmentTemplate } from '@/types';
 
 export default function AssessmentsPage() {
   const [filterGrade, setFilterGrade] = useState<string>('all');
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
-  const [viewingAssessment, setViewingAssessment] = useState<AssessmentTemplate | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<AssessmentTemplate | null>(null);
+  const [duplicatingTemplate, setDuplicatingTemplate] = useState<AssessmentTemplate | null>(null);
 
-  const { assessmentTemplates, deleteAssessmentTemplate, grades, activeSchoolYearId } = useAppStore();
+  const { assessmentTemplates, updateAssessmentTemplate, grades, activeSchoolYearId } = useAppStore();
 
-  const activeAssessments = assessmentTemplates.filter(
-    (a) => a.schoolYearId === activeSchoolYearId
-  );
+  const activeAssessments = assessmentTemplates.filter((a) => {
+    const matchesYear = a.schoolYearId === activeSchoolYearId;
+    const isArchived = (a as any).isArchived === true;
+    return matchesYear && (showArchived ? isArchived : !isArchived);
+  });
 
   const filteredAssessments = activeAssessments.filter(
     (a) => filterGrade === 'all' || a.gradeId === filterGrade
   );
 
-  const handleDelete = (id: string) => {
-    deleteAssessmentTemplate(id);
-    toast.success('Assessment deleted');
+  const handleArchive = (template: AssessmentTemplate) => {
+    const isArchived = (template as any).isArchived;
+    updateAssessmentTemplate(template.id, { isArchived: !isArchived } as any);
+    toast.success(isArchived ? 'Assessment restored' : 'Assessment archived');
   };
 
   const getGradeInfo = (gradeId: string) => grades.find((g) => g.id === gradeId);
@@ -81,13 +83,17 @@ export default function AssessmentsPage() {
           <div>
             <h1 className="font-display text-2xl font-bold">Assessments</h1>
             <p className="text-muted-foreground">
-              View assessment templates organized by subject and grade
+              Create and manage assessment templates organized by subject and grade
             </p>
           </div>
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Template
+          </Button>
         </div>
 
-        {/* Filter */}
-        <div className="flex gap-3">
+        {/* Filters */}
+        <div className="flex gap-3 items-center">
           <Select value={filterGrade} onValueChange={setFilterGrade}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by grade" />
@@ -101,6 +107,17 @@ export default function AssessmentsPage() {
               ))}
             </SelectContent>
           </Select>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <Switch
+              id="show-archived"
+              checked={showArchived}
+              onCheckedChange={setShowArchived}
+            />
+            <label htmlFor="show-archived" className="text-sm text-muted-foreground cursor-pointer">
+              Show archived
+            </label>
+          </div>
         </div>
 
         {/* Assessments by Grade */}
@@ -121,7 +138,7 @@ export default function AssessmentsPage() {
                   />
                   <h2 className="font-display font-semibold">{grade.name}</h2>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                    {assessments.length} assessments
+                    {assessments.length} {showArchived ? 'archived' : 'templates'}
                   </span>
                 </div>
 
@@ -134,7 +151,7 @@ export default function AssessmentsPage() {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: index * 0.05 }}
                       >
-                        <Card className="overflow-hidden">
+                        <Card className={`overflow-hidden ${showArchived ? 'opacity-75' : ''}`}>
                           <div
                             className="h-1.5"
                             style={{ backgroundColor: `hsl(var(--grade-${grade.colorIndex}))` }}
@@ -217,11 +234,35 @@ export default function AssessmentsPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                                onClick={() => handleDelete(assessment.id)}
+                                onClick={() => setEditingTemplate(assessment)}
                               >
-                                <Trash2 className="mr-1.5 h-3 w-3" />
-                                Delete
+                                <Pencil className="mr-1.5 h-3 w-3" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDuplicatingTemplate(assessment)}
+                              >
+                                <Copy className="mr-1.5 h-3 w-3" />
+                                Duplicate to Year
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleArchive(assessment)}
+                              >
+                                {(assessment as any).isArchived ? (
+                                  <>
+                                    <ArchiveRestore className="mr-1.5 h-3 w-3" />
+                                    Restore
+                                  </>
+                                ) : (
+                                  <>
+                                    <Archive className="mr-1.5 h-3 w-3" />
+                                    Archive
+                                  </>
+                                )}
                               </Button>
                             </div>
                           </CardContent>
@@ -232,7 +273,7 @@ export default function AssessmentsPage() {
                 ) : (
                   <Card className="border-dashed">
                     <CardContent className="py-8 text-center text-muted-foreground">
-                      No assessments for this grade
+                      No {showArchived ? 'archived' : ''} assessments for this grade
                     </CardContent>
                   </Card>
                 )}
@@ -245,16 +286,46 @@ export default function AssessmentsPage() {
               <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                   <ClipboardList className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                  <h3 className="mb-2 font-semibold">No assessments yet</h3>
+                  <h3 className="mb-2 font-semibold">
+                    {showArchived ? 'No archived assessments' : 'No assessments yet'}
+                  </h3>
                   <p className="mb-4 text-sm text-muted-foreground">
-                    Assessment templates will appear here once created
+                    {showArchived
+                      ? 'Archived templates will appear here'
+                      : 'Create your first assessment template to get started'}
                   </p>
+                  {!showArchived && (
+                    <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Create Template
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
           )}
         </div>
       </div>
+
+      {/* Dialogs */}
+      <AssessmentTemplateDialog
+        open={isCreateDialogOpen || !!editingTemplate}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateDialogOpen(false);
+            setEditingTemplate(null);
+          }
+        }}
+        editingTemplate={editingTemplate}
+      />
+
+      {duplicatingTemplate && (
+        <DuplicateYearDialog
+          open={!!duplicatingTemplate}
+          onOpenChange={(open) => !open && setDuplicatingTemplate(null)}
+          template={duplicatingTemplate}
+        />
+      )}
     </AppLayout>
   );
 }
