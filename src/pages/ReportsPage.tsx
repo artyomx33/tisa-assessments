@@ -88,6 +88,7 @@ export default function ReportsPage() {
     assessmentTemplates,
     grades,
     activeSchoolYearId,
+    appSettings,
   } = useAppStore();
 
   const activeStudents = students.filter((s) => s.schoolYearId === activeSchoolYearId);
@@ -216,11 +217,45 @@ export default function ReportsPage() {
       return;
     }
 
-    // Simulate AI rewrite (placeholder for actual AI integration)
-    const tisaVoice = `${text.charAt(0).toUpperCase()}${text.slice(1)}. The student demonstrates consistent effort and maintains a positive attitude towards learning. We encourage continued practice at home to further develop these skills.`;
+    // Get the writing style guide from app settings
+    const styleGuide = appSettings.companyWritingStyle;
     
-    callback(tisaVoice);
-    toast.success('Text rewritten in TISA voice!');
+    // Build AI-polished text using the style guide
+    let polishedText = text.charAt(0).toUpperCase() + text.slice(1);
+    
+    if (styleGuide) {
+      // Apply style guide principles to the rewrite
+      // This is a simulation - in production, this would call an AI API with the style guide as system prompt
+      const styleNotes = styleGuide.toLowerCase();
+      
+      // Add encouraging language if style guide mentions it
+      if (styleNotes.includes('encouraging') || styleNotes.includes('positive')) {
+        polishedText += '. The student shows wonderful progress and enthusiasm in this area.';
+      }
+      
+      // Add growth mindset language if mentioned
+      if (styleNotes.includes('growth') || styleNotes.includes('develop')) {
+        polishedText += ' We are excited to see continued development and look forward to celebrating future achievements.';
+      }
+      
+      // Add parent engagement if mentioned
+      if (styleNotes.includes('parent') || styleNotes.includes('home')) {
+        polishedText += ' We encourage continued practice and engagement at home to reinforce these skills.';
+      }
+      
+      // If no specific matches, add a general professional polish
+      if (!polishedText.includes('.')) {
+        polishedText += '. The student demonstrates consistent effort and maintains a positive attitude towards learning.';
+      }
+      
+      toast.success('Text polished using your style guide!');
+    } else {
+      // Default polish without style guide
+      polishedText += '. The student demonstrates consistent effort and maintains a positive attitude towards learning. We encourage continued practice at home to further develop these skills.';
+      toast.info('Text polished! Tip: Add a writing style guide in Settings for personalized AI rewrites.');
+    }
+    
+    callback(polishedText);
   };
 
   const onSubmit = (data: ReportFormValues) => {
