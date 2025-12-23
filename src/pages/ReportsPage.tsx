@@ -788,39 +788,98 @@ export default function ReportsPage() {
 
         {/* View Report Dialog */}
         <Dialog open={!!viewingReport} onOpenChange={(open) => !open && setViewingReport(null)}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             {viewingReport && (() => {
               const reportStudent = students.find((s) => s.id === viewingReport.studentId);
               const reportAssessment = assessmentTemplates.find((a) => a.id === viewingReport.assessmentTemplateId);
               const reportGrade = reportStudent ? getGradeInfo(reportStudent.gradeId) : null;
+              const { appSettings } = useAppStore.getState();
 
               return (
                 <>
-                  <DialogHeader>
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="h-3 w-3 rounded-full"
-                        style={{
-                          backgroundColor: reportGrade
-                            ? `hsl(var(--grade-${reportGrade.colorIndex}))`
-                            : 'hsl(var(--muted))',
-                        }}
-                      />
-                      <DialogTitle>
-                        {reportStudent
-                          ? `${reportStudent.firstName} ${reportStudent.lastName}`
-                          : 'Unknown Student'}
-                      </DialogTitle>
-                      <Badge variant={viewingReport.status === 'completed' ? 'default' : 'secondary'}>
-                        {viewingReport.status}
-                      </Badge>
-                    </div>
-                    <DialogDescription>
-                      {reportAssessment?.name} • {viewingReport.term} • {reportGrade?.name || 'Unknown Grade'}
-                    </DialogDescription>
-                  </DialogHeader>
+                  {/* Report Header */}
+                  <div className="text-center border-b pb-4">
+                    <h2 className="font-display text-lg font-bold uppercase tracking-wide">
+                      {viewingReport.reportTitle || 'STUDENT PROGRESS REPORT'} — {viewingReport.term}
+                    </h2>
+                    {(viewingReport.periodStart || viewingReport.periodEnd) && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Period: {viewingReport.periodStart} - {viewingReport.periodEnd}
+                      </p>
+                    )}
+                  </div>
 
                   <div className="space-y-6 py-4">
+                    {/* Student Information */}
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Student Information</h3>
+                      <div className="grid grid-cols-2 gap-2 text-sm bg-muted/30 rounded-lg p-3">
+                        <div><span className="text-muted-foreground">Full Name:</span> <strong>{reportStudent?.firstName} {reportStudent?.lastName}</strong></div>
+                        {reportStudent?.nameUsed && (
+                          <div><span className="text-muted-foreground">Name Used:</span> <strong>{reportStudent.nameUsed}</strong></div>
+                        )}
+                        <div><span className="text-muted-foreground">Grade Level:</span> <strong>{reportGrade?.name}</strong></div>
+                        {reportStudent?.dateOfBirth && (
+                          <div><span className="text-muted-foreground">Date of Birth:</span> <strong>{new Date(reportStudent.dateOfBirth).toLocaleDateString('en-GB')}</strong></div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Teacher Information */}
+                    {reportGrade?.teacherAssignments && reportGrade.teacherAssignments.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Teacher Information</h3>
+                        <div className="bg-muted/30 rounded-lg p-3 space-y-3">
+                          {reportGrade.classroomTeacher && (
+                            <div className="text-sm"><span className="text-muted-foreground">Classroom Teacher:</span> <strong>{reportGrade.classroomTeacher}</strong></div>
+                          )}
+                          {reportGrade.teacherAssignments.filter(a => a.category === 'core').length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">CORE PROGRAMME</p>
+                              <div className="grid grid-cols-2 gap-1 text-sm">
+                                {reportGrade.teacherAssignments.filter(a => a.category === 'core').map((a) => (
+                                  <div key={a.id}><span className="text-muted-foreground">{a.subject}:</span> {a.teacher}</div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {reportGrade.teacherAssignments.filter(a => a.category === 'professional').length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">PROFESSIONAL TRACKS</p>
+                              <div className="grid grid-cols-2 gap-1 text-sm">
+                                {reportGrade.teacherAssignments.filter(a => a.category === 'professional').map((a) => (
+                                  <div key={a.id}><span className="text-muted-foreground">{a.subject}:</span> {a.teacher}</div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* School Mission */}
+                    {appSettings.missionStatement && (
+                      <div className="space-y-2">
+                        <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Our Mission</h3>
+                        <p className="text-sm text-muted-foreground italic">{appSettings.missionStatement}</p>
+                        {appSettings.values.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {appSettings.values.map((value, i) => (
+                              <Badge key={i} variant="outline" className="text-xs">{value}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Grading Key */}
+                    {appSettings.gradingKey && (
+                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                        <h4 className="font-medium text-sm mb-1">Grading Key</h4>
+                        <p className="text-xs text-muted-foreground whitespace-pre-line">{appSettings.gradingKey}</p>
+                      </div>
+                    )}
+
                     {/* Subjects and Assessment Points */}
                     {reportAssessment?.subjects.map((subject) => {
                       const subjectEntries = viewingReport.entries.filter((e) => e.subjectId === subject.id);
@@ -837,51 +896,38 @@ export default function ReportsPage() {
                             )}
                           </div>
 
-                          {/* Assessment Points */}
                           <div className="space-y-2 pl-4 border-l-2 border-muted">
                             {subject.assessmentPoints.map((point) => {
                               const entry = subjectEntries.find((e) => e.assessmentPointId === point.id);
                               return (
                                 <div key={point.id} className="flex items-start justify-between gap-4 py-1">
                                   <span className="text-sm text-muted-foreground flex-1">{point.name}</span>
-                                  <StarRating
-                                    value={entry?.stars || 0}
-                                    max={point.maxStars}
-                                    readonly
-                                    size="sm"
-                                  />
+                                  <StarRating value={entry?.stars || 0} max={point.maxStars} readonly size="sm" />
                                 </div>
                               );
                             })}
                           </div>
 
-                          {/* Subject Comment */}
                           {(subjectComment?.teacherComment || subjectComment?.aiRewrittenComment) && (
                             <div className="bg-muted/50 rounded-lg p-3 text-sm">
                               <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
                                 <MessageSquare className="h-3 w-3" />
                                 Comment
                               </div>
-                              <p className="text-foreground">
-                                {subjectComment.aiRewrittenComment || subjectComment.teacherComment}
-                              </p>
+                              <p className="text-foreground">{subjectComment.aiRewrittenComment || subjectComment.teacherComment}</p>
                             </div>
                           )}
                         </div>
                       );
                     })}
 
-                    {/* General Comment */}
                     {viewingReport.generalComment && (
                       <div className="border-t pt-4">
                         <h3 className="font-semibold text-foreground mb-2">General Comment</h3>
-                        <div className="bg-muted/50 rounded-lg p-3 text-sm text-foreground">
-                          {viewingReport.generalComment}
-                        </div>
+                        <div className="bg-muted/50 rounded-lg p-3 text-sm text-foreground">{viewingReport.generalComment}</div>
                       </div>
                     )}
 
-                    {/* Report Metadata */}
                     <div className="border-t pt-4 text-xs text-muted-foreground flex items-center justify-between">
                       <span>Created: {new Date(viewingReport.createdAt).toLocaleDateString()}</span>
                       <span>Updated: {new Date(viewingReport.updatedAt).toLocaleDateString()}</span>
@@ -889,9 +935,7 @@ export default function ReportsPage() {
                   </div>
 
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setViewingReport(null)}>
-                      Close
-                    </Button>
+                    <Button variant="outline" onClick={() => setViewingReport(null)}>Close</Button>
                   </DialogFooter>
                 </>
               );

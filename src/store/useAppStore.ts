@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { SchoolYear, Grade, AssessmentTemplate, Student, StudentReport, AssessmentPoint } from '@/types';
+import type { SchoolYear, Grade, AssessmentTemplate, Student, StudentReport, AssessmentPoint, AppSettings, TeacherAssignment } from '@/types';
 
 interface AppState {
   // School Years
@@ -32,6 +32,10 @@ interface AppState {
   addReport: (report: StudentReport) => void;
   updateReport: (id: string, report: Partial<StudentReport>) => void;
   deleteReport: (id: string) => void;
+
+  // App Settings
+  appSettings: AppSettings;
+  updateAppSettings: (settings: Partial<AppSettings>) => void;
 }
 
 const generateId = () => crypto.randomUUID();
@@ -48,12 +52,45 @@ const defaultSchoolYear: SchoolYear = {
 // Grade 0-1 ID for reference
 const grade01Id = generateId();
 
-// Default grades
+// Default grades with teacher assignments
 const defaultGrades: Grade[] = [
-  { id: grade01Id, name: 'Grade 0-1', description: 'Early Years', colorIndex: 0, order: 0 },
+  { 
+    id: grade01Id, 
+    name: 'Grade 0-1', 
+    description: 'Early Years', 
+    colorIndex: 0, 
+    order: 0,
+    classroomTeacher: 'Ms Carin',
+    teacherAssignments: [
+      { id: generateId(), subject: 'English', teacher: 'Ms Carin', category: 'core' },
+      { id: generateId(), subject: 'Math', teacher: 'Ms Carin', category: 'core' },
+      { id: generateId(), subject: 'Science', teacher: 'Ms Carin', category: 'core' },
+      { id: generateId(), subject: 'Social Studies', teacher: 'Ms Carin/Ms Natalia', category: 'core' },
+      { id: generateId(), subject: 'Dutch', teacher: 'Ms Carin', category: 'core' },
+      { id: generateId(), subject: 'Literature', teacher: 'Ms Carin/Ms Natalia', category: 'core' },
+      { id: generateId(), subject: 'Mental Math', teacher: 'Ms Carin', category: 'core' },
+      { id: generateId(), subject: 'Art', teacher: 'Ms Tetiana', category: 'core' },
+      { id: generateId(), subject: 'Drama', teacher: 'Ms Natalia', category: 'core' },
+      { id: generateId(), subject: 'Jiu Jitsu', teacher: 'Mr Sam', category: 'core' },
+      { id: generateId(), subject: 'STEAM, Robotics', teacher: 'Mr Roman', category: 'professional' },
+      { id: generateId(), subject: 'CAD, Music (Choir)', teacher: 'Ms Arina', category: 'professional' },
+      { id: generateId(), subject: 'CAD, Music (Piano)', teacher: 'Ms Arina', category: 'professional' },
+    ],
+  },
   { id: generateId(), name: 'Grade 2-3', description: 'Lower Primary', colorIndex: 1, order: 1 },
   { id: generateId(), name: 'Grade 4-5', description: 'Upper Primary', colorIndex: 2, order: 2 },
 ];
+
+// Default app settings
+const defaultAppSettings: AppSettings = {
+  schoolName: 'TISA School',
+  missionStatement: 'At TISA School, we empower each student to achieve academic and holistic excellence, develop their natural talents, and become globally-minded citizens who are socially responsible and successful.',
+  statement: 'Tisa empowers each student to:\n• Respect themselves and others;\n• Develop a lifelong love of learning;\n• Contribute as a globally-minded citizen to achieve individual academic and holistic excellence.',
+  vision: 'We inspire student learning:\n• Through a dynamic and caring environment;\n• With innovative and effective instructional strategies;\n• In collaborative relationships.',
+  values: ['Respect', 'Integrity', 'Courage', 'Curiosity', 'Care'],
+  gradingKey: '⭐⭐⭐ - Mostly\n⭐⭐ - Usually\n⭐ - Rarely',
+  companyWritingStyle: '',
+};
 
 // Helper to create assessment points
 const createPoint = (name: string, maxStars: number = 3): AssessmentPoint => ({
@@ -433,6 +470,7 @@ const grade01Template: AssessmentTemplate = {
       description: 'Advanced vocal skills',
       assessmentPoints: [
         createPoint('Creation and exploration of sound: Distinguish between high and low pitches'),
+        createPoint('Simple vocal exercises: Legato and staccato in simple melodies'),
         createPoint('Breathing technique: Practice calm nasal inhalation and gentle exhalation'),
         createPoint('Diction and articulation: Clear pronunciation of vowels and consonants'),
         createPoint('Performance and stage attitude: Stand in formation, walk on stage, face the audience'),
@@ -553,6 +591,14 @@ export const useAppStore = create<AppState>()(
       deleteReport: (id) =>
         set((state) => ({
           reports: state.reports.filter((r) => r.id !== id),
+        })),
+
+      // App Settings
+      appSettings: defaultAppSettings,
+      
+      updateAppSettings: (settings) =>
+        set((state) => ({
+          appSettings: { ...state.appSettings, ...settings },
         })),
     }),
     {

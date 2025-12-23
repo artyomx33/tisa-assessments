@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Pencil, Trash2, GraduationCap, Users, ClipboardList } from 'lucide-react';
+import { Plus, Pencil, Trash2, GraduationCap, Users, ClipboardList, Settings, UserCheck } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,7 +34,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import type { TeacherAssignment, Grade } from '@/types';
 
 const gradeFormSchema = z.object({
   name: z.string().min(1, 'Grade name is required'),
@@ -56,6 +66,12 @@ const colorOptions = [
 export default function GradesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGrade, setEditingGrade] = useState<string | null>(null);
+  const [settingsGrade, setSettingsGrade] = useState<Grade | null>(null);
+  const [classroomTeacher, setClassroomTeacher] = useState('');
+  const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
+  const [newSubject, setNewSubject] = useState('');
+  const [newTeacher, setNewTeacher] = useState('');
+  const [newCategory, setNewCategory] = useState<'core' | 'professional'>('core');
   
   const { grades, addGrade, updateGrade, deleteGrade, students, assessmentTemplates, activeSchoolYearId } = useAppStore();
 
@@ -84,6 +100,12 @@ export default function GradesPage() {
     setIsDialogOpen(true);
   };
 
+  const openSettingsDialog = (grade: Grade) => {
+    setSettingsGrade(grade);
+    setClassroomTeacher(grade.classroomTeacher || '');
+    setTeacherAssignments(grade.teacherAssignments || []);
+  };
+
   const onSubmit = (data: GradeFormValues) => {
     if (editingGrade) {
       updateGrade(editingGrade, data);
@@ -104,6 +126,40 @@ export default function GradesPage() {
     deleteGrade(id);
     toast.success('Grade deleted');
   };
+
+  const addTeacherAssignment = () => {
+    if (!newSubject.trim() || !newTeacher.trim()) {
+      toast.error('Please enter both subject and teacher');
+      return;
+    }
+    const newAssignment: TeacherAssignment = {
+      id: crypto.randomUUID(),
+      subject: newSubject.trim(),
+      teacher: newTeacher.trim(),
+      category: newCategory,
+    };
+    setTeacherAssignments([...teacherAssignments, newAssignment]);
+    setNewSubject('');
+    setNewTeacher('');
+  };
+
+  const removeTeacherAssignment = (id: string) => {
+    setTeacherAssignments(teacherAssignments.filter((a) => a.id !== id));
+  };
+
+  const saveTeacherSettings = () => {
+    if (settingsGrade) {
+      updateGrade(settingsGrade.id, {
+        classroomTeacher,
+        teacherAssignments,
+      });
+      toast.success('Teacher assignments saved');
+      setSettingsGrade(null);
+    }
+  };
+
+  const coreAssignments = teacherAssignments.filter((a) => a.category === 'core');
+  const professionalAssignments = teacherAssignments.filter((a) => a.category === 'professional');
 
   return (
     <AppLayout>
@@ -248,6 +304,12 @@ export default function GradesPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      {grade.classroomTeacher && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <UserCheck className="h-4 w-4" />
+                          <span>Teacher: {grade.classroomTeacher}</span>
+                        </div>
+                      )}
                       <div className="flex gap-4">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Users className="h-4 w-4" />
@@ -263,10 +325,17 @@ export default function GradesPage() {
                           variant="outline"
                           size="sm"
                           className="flex-1"
+                          onClick={() => openSettingsDialog(grade)}
+                        >
+                          <Settings className="mr-1.5 h-3 w-3" />
+                          Teachers
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => openEditDialog(grade)}
                         >
-                          <Pencil className="mr-1.5 h-3 w-3" />
-                          Edit
+                          <Pencil className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="outline"
@@ -306,6 +375,151 @@ export default function GradesPage() {
             </motion.div>
           )}
         </motion.div>
+
+        {/* Teacher Settings Dialog */}
+        <Dialog open={!!settingsGrade} onOpenChange={(open) => !open && setSettingsGrade(null)}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Teacher Assignments - {settingsGrade?.name}</DialogTitle>
+              <DialogDescription>
+                Manage classroom teacher and subject-specific teacher assignments
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Classroom Teacher */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Classroom Teacher</label>
+                <Input
+                  placeholder="e.g., Ms Carin"
+                  value={classroomTeacher}
+                  onChange={(e) => setClassroomTeacher(e.target.value)}
+                />
+              </div>
+
+              {/* Teacher Assignments */}
+              <Tabs defaultValue="core" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="core">Core Programme ({coreAssignments.length})</TabsTrigger>
+                  <TabsTrigger value="professional">Professional Tracks ({professionalAssignments.length})</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="core" className="space-y-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>Teacher</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {coreAssignments.map((assignment) => (
+                        <TableRow key={assignment.id}>
+                          <TableCell>{assignment.subject}</TableCell>
+                          <TableCell>{assignment.teacher}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => removeTeacherAssignment(assignment.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {coreAssignments.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground">
+                            No core programme assignments
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+
+                <TabsContent value="professional" className="space-y-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>Teacher</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {professionalAssignments.map((assignment) => (
+                        <TableRow key={assignment.id}>
+                          <TableCell>{assignment.subject}</TableCell>
+                          <TableCell>{assignment.teacher}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => removeTeacherAssignment(assignment.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {professionalAssignments.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground">
+                            No professional track assignments
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+              </Tabs>
+
+              {/* Add New Assignment */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-medium text-sm">Add Teacher Assignment</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <Input
+                    placeholder="Subject"
+                    value={newSubject}
+                    onChange={(e) => setNewSubject(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Teacher"
+                    value={newTeacher}
+                    onChange={(e) => setNewTeacher(e.target.value)}
+                  />
+                  <Select value={newCategory} onValueChange={(val: 'core' | 'professional') => setNewCategory(val)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="core">Core</SelectItem>
+                      <SelectItem value="professional">Professional</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addTeacherAssignment}>
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  Add Assignment
+                </Button>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSettingsGrade(null)}>
+                Cancel
+              </Button>
+              <Button onClick={saveTeacherSettings}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

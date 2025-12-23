@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Pencil, Trash2, Users, Search, UserCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Search, UserCircle, CalendarDays } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format } from 'date-fns';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAppStore } from '@/store/useAppStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
   DialogContent,
@@ -33,11 +35,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 const studentFormSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
+  nameUsed: z.string().optional(),
+  dateOfBirth: z.date().optional(),
   gradeId: z.string().min(1, 'Please select a grade'),
 });
 
@@ -56,6 +66,8 @@ export default function StudentsPage() {
     defaultValues: {
       firstName: '',
       lastName: '',
+      nameUsed: '',
+      dateOfBirth: undefined,
       gradeId: '',
     },
   });
@@ -65,13 +77,14 @@ export default function StudentsPage() {
   const filteredStudents = activeStudents.filter((student) => {
     const matchesSearch =
       student.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.lastName.toLowerCase().includes(searchQuery.toLowerCase());
+      student.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (student.nameUsed && student.nameUsed.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesGrade = filterGrade === 'all' || student.gradeId === filterGrade;
     return matchesSearch && matchesGrade;
   });
 
   const openCreateDialog = () => {
-    form.reset({ firstName: '', lastName: '', gradeId: '' });
+    form.reset({ firstName: '', lastName: '', nameUsed: '', dateOfBirth: undefined, gradeId: '' });
     setEditingStudent(null);
     setIsDialogOpen(true);
   };
@@ -80,6 +93,8 @@ export default function StudentsPage() {
     form.reset({
       firstName: student.firstName,
       lastName: student.lastName,
+      nameUsed: student.nameUsed || '',
+      dateOfBirth: student.dateOfBirth ? new Date(student.dateOfBirth) : undefined,
       gradeId: student.gradeId,
     });
     setEditingStudent(student.id);
@@ -87,13 +102,21 @@ export default function StudentsPage() {
   };
 
   const onSubmit = (data: StudentFormValues) => {
+    const studentData = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      nameUsed: data.nameUsed || undefined,
+      dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : undefined,
+      gradeId: data.gradeId,
+    };
+
     if (editingStudent) {
-      updateStudent(editingStudent, data);
+      updateStudent(editingStudent, studentData);
       toast.success('Student updated successfully');
     } else {
       addStudent({
         id: crypto.randomUUID(),
-        ...data,
+        ...studentData,
         schoolYearId: activeSchoolYearId!,
       });
       toast.success('Student added successfully');
@@ -144,14 +167,42 @@ export default function StudentsPage() {
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter first name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter last name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <FormField
                     control={form.control}
-                    name="firstName"
+                    name="nameUsed"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>First Name</FormLabel>
+                        <FormLabel>Name Used (Nickname)</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter first name" {...field} />
+                          <Input placeholder="e.g., Adriana (optional)" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -159,13 +210,45 @@ export default function StudentsPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="lastName"
+                    name="dateOfBirth"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter last name" {...field} />
-                        </FormControl>
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Date of Birth</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "dd-MM-yyyy")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date > new Date() || date < new Date("1900-01-01")
+                              }
+                              initialFocus
+                              className="p-3 pointer-events-auto"
+                              captionLayout="dropdown-buttons"
+                              fromYear={2010}
+                              toYear={new Date().getFullYear()}
+                            />
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -284,8 +367,16 @@ export default function StudentsPage() {
                                 <p className="font-medium truncate">
                                   {student.firstName} {student.lastName}
                                 </p>
+                                {student.nameUsed && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    "{student.nameUsed}"
+                                  </p>
+                                )}
                                 <p className="text-xs text-muted-foreground">
                                   {grade.name}
+                                  {student.dateOfBirth && (
+                                    <> • {format(new Date(student.dateOfBirth), 'dd-MM-yyyy')}</>
+                                  )}
                                 </p>
                               </div>
                               <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">

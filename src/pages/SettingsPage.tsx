@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, Calendar, Check } from 'lucide-react';
+import { Plus, Trash2, Calendar, Check, Building2, Target, Eye, Heart, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,6 +9,8 @@ import { useAppStore } from '@/store/useAppStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -38,7 +40,8 @@ type SchoolYearFormValues = z.infer<typeof schoolYearFormSchema>;
 
 export default function SettingsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { schoolYears, addSchoolYear, setActiveSchoolYear, activeSchoolYearId } = useAppStore();
+  const [newValue, setNewValue] = useState('');
+  const { schoolYears, addSchoolYear, setActiveSchoolYear, activeSchoolYearId, appSettings, updateAppSettings } = useAppStore();
 
   const form = useForm<SchoolYearFormValues>({
     resolver: zodResolver(schoolYearFormSchema),
@@ -60,13 +63,143 @@ export default function SettingsPage() {
     form.reset();
   };
 
+  const handleAddValue = () => {
+    if (newValue.trim()) {
+      updateAppSettings({
+        values: [...appSettings.values, newValue.trim()],
+      });
+      setNewValue('');
+      toast.success('Value added');
+    }
+  };
+
+  const handleRemoveValue = (index: number) => {
+    const newValues = appSettings.values.filter((_, i) => i !== index);
+    updateAppSettings({ values: newValues });
+  };
+
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-2xl">
+      <div className="space-y-6 max-w-3xl">
         <div>
           <h1 className="font-display text-2xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Manage school years and app configuration</p>
+          <p className="text-muted-foreground">Manage school years, school info, and app configuration</p>
         </div>
+
+        {/* School Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              School Information
+            </CardTitle>
+            <CardDescription>
+              This information appears on student progress reports
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">School Name</label>
+              <Input
+                placeholder="e.g., TISA School"
+                value={appSettings.schoolName}
+                onChange={(e) => updateAppSettings({ schoolName: e.target.value })}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Mission Statement
+              </label>
+              <Textarea
+                placeholder="Enter your school's mission statement..."
+                value={appSettings.missionStatement}
+                onChange={(e) => updateAppSettings({ missionStatement: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Statement</label>
+              <Textarea
+                placeholder="Enter statement (use bullet points with •)"
+                value={appSettings.statement}
+                onChange={(e) => updateAppSettings({ statement: e.target.value })}
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">Use • for bullet points</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                Vision
+              </label>
+              <Textarea
+                placeholder="Enter your school's vision..."
+                value={appSettings.vision}
+                onChange={(e) => updateAppSettings({ vision: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Heart className="h-4 w-4" />
+                Values
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {appSettings.values.map((value, index) => (
+                  <Badge key={index} variant="secondary" className="gap-1 pr-1">
+                    {value}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveValue(index)}
+                      className="ml-1 hover:bg-destructive/20 rounded p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add a value (e.g., Respect)"
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddValue())}
+                  className="flex-1"
+                />
+                <Button type="button" variant="outline" size="sm" onClick={handleAddValue}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Grading Key</label>
+              <Textarea
+                placeholder="e.g., ⭐⭐⭐ - Mostly&#10;⭐⭐ - Usually&#10;⭐ - Rarely"
+                value={appSettings.gradingKey}
+                onChange={(e) => updateAppSettings({ gradingKey: e.target.value })}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">Explains the star rating system on reports</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Writing Style Guide (for AI)</label>
+              <Textarea
+                placeholder="Describe the writing style for AI to use when rewriting comments..."
+                value={appSettings.companyWritingStyle}
+                onChange={(e) => updateAppSettings({ companyWritingStyle: e.target.value })}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">Used by AI when rewriting teacher comments</p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* School Years */}
         <Card>

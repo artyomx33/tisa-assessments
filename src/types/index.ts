@@ -11,6 +11,16 @@ export const schoolYearSchema = z.object({
 
 export type SchoolYear = z.infer<typeof schoolYearSchema>;
 
+// Teacher Assignment Schema
+export const teacherAssignmentSchema = z.object({
+  id: z.string(),
+  subject: z.string().min(1, 'Subject is required'),
+  teacher: z.string().min(1, 'Teacher name is required'),
+  category: z.enum(['core', 'professional']),
+});
+
+export type TeacherAssignment = z.infer<typeof teacherAssignmentSchema>;
+
 // Grade Schema
 export const gradeSchema = z.object({
   id: z.string(),
@@ -18,6 +28,8 @@ export const gradeSchema = z.object({
   description: z.string().optional(),
   colorIndex: z.number().min(0).max(5).default(0),
   order: z.number().default(0),
+  classroomTeacher: z.string().optional(),
+  teacherAssignments: z.array(teacherAssignmentSchema).optional(),
 });
 
 export type Grade = z.infer<typeof gradeSchema>;
@@ -97,6 +109,9 @@ export const studentReportSchema = z.object({
   assessmentTemplateId: z.string(),
   schoolYearId: z.string(),
   term: z.string().default('Term 1 & 2'),
+  reportTitle: z.string().optional(),
+  periodStart: z.string().optional(),
+  periodEnd: z.string().optional(),
   entries: z.array(reportEntrySchema),
   subjectComments: z.array(subjectCommentSchema).optional(),
   generalComment: z.string().optional(),
@@ -106,3 +121,16 @@ export const studentReportSchema = z.object({
 });
 
 export type StudentReport = z.infer<typeof studentReportSchema>;
+
+// App Settings Schema
+export const appSettingsSchema = z.object({
+  schoolName: z.string().default(''),
+  missionStatement: z.string().default(''),
+  statement: z.string().default(''),
+  vision: z.string().default(''),
+  values: z.array(z.string()).default([]),
+  gradingKey: z.string().default(''),
+  companyWritingStyle: z.string().default(''),
+});
+
+export type AppSettings = z.infer<typeof appSettingsSchema>;
