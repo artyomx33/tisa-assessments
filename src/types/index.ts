@@ -22,25 +22,35 @@ export const gradeSchema = z.object({
 
 export type Grade = z.infer<typeof gradeSchema>;
 
-// Subject/Assessment Template Schema
+// Assessment Point Schema
 export const assessmentPointSchema = z.object({
   id: z.string(),
-  label: z.string().min(1, 'Assessment point label is required'),
+  name: z.string().min(1, 'Assessment point name is required'),
   description: z.string().optional(),
-  maxStars: z.number().min(1).max(5).default(4),
-  order: z.number().default(0),
+  maxStars: z.number().min(1).max(5).default(3),
 });
 
 export type AssessmentPoint = z.infer<typeof assessmentPointSchema>;
 
+// Subject Schema (grouping of assessment points)
+export const subjectSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, 'Subject name is required'),
+  description: z.string().optional(),
+  assessmentPoints: z.array(assessmentPointSchema),
+});
+
+export type Subject = z.infer<typeof subjectSchema>;
+
+// Assessment Template Schema (full report structure)
 export const assessmentTemplateSchema = z.object({
   id: z.string(),
   gradeId: z.string(),
   name: z.string().min(1, 'Assessment name is required'),
   description: z.string().optional(),
-  points: z.array(assessmentPointSchema),
+  subjects: z.array(subjectSchema),
   schoolYearId: z.string(),
-  createdAt: z.string(),
+  createdAt: z.string().optional(),
 });
 
 export type AssessmentTemplate = z.infer<typeof assessmentTemplateSchema>;
@@ -50,6 +60,8 @@ export const studentSchema = z.object({
   id: z.string(),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
+  nameUsed: z.string().optional(),
+  dateOfBirth: z.string().optional(),
   gradeId: z.string(),
   schoolYearId: z.string(),
   avatarUrl: z.string().optional(),
@@ -57,9 +69,10 @@ export const studentSchema = z.object({
 
 export type Student = z.infer<typeof studentSchema>;
 
-// Report Entry (filled assessment)
+// Report Entry (filled assessment for one point)
 export const reportEntrySchema = z.object({
   assessmentPointId: z.string(),
+  subjectId: z.string(),
   stars: z.number().min(0).max(5),
   teacherNotes: z.string().optional(),
   aiRewrittenText: z.string().optional(),
@@ -67,13 +80,26 @@ export const reportEntrySchema = z.object({
 
 export type ReportEntry = z.infer<typeof reportEntrySchema>;
 
+// Subject Comment (teacher comment per subject)
+export const subjectCommentSchema = z.object({
+  subjectId: z.string(),
+  teacherComment: z.string().optional(),
+  aiRewrittenComment: z.string().optional(),
+  attitudeTowardsLearning: z.enum(['Emerging', 'Developing', 'Applying', 'Independent']).optional(),
+});
+
+export type SubjectComment = z.infer<typeof subjectCommentSchema>;
+
+// Student Report Schema
 export const studentReportSchema = z.object({
   id: z.string(),
   studentId: z.string(),
   assessmentTemplateId: z.string(),
   schoolYearId: z.string(),
-  term: z.number().min(1).max(4),
+  term: z.string().default('Term 1 & 2'),
   entries: z.array(reportEntrySchema),
+  subjectComments: z.array(subjectCommentSchema).optional(),
+  generalComment: z.string().optional(),
   status: z.enum(['draft', 'completed', 'reviewed']).default('draft'),
   createdAt: z.string(),
   updatedAt: z.string(),
