@@ -116,6 +116,8 @@ export const studentReportSchema = z.object({
   subjectComments: z.array(subjectCommentSchema).optional(),
   generalComment: z.string().optional(),
   status: z.enum(['draft', 'completed', 'reviewed']).default('draft'),
+  shareToken: z.string().optional(),
+  sharedAt: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

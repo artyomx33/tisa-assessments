@@ -32,6 +32,8 @@ interface AppState {
   addReport: (report: StudentReport) => void;
   updateReport: (id: string, report: Partial<StudentReport>) => void;
   deleteReport: (id: string) => void;
+  updateReportShareToken: (id: string, token: string) => void;
+  getReportByShareToken: (token: string) => StudentReport | undefined;
 
   // App Settings
   appSettings: AppSettings;
@@ -592,6 +594,17 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           reports: state.reports.filter((r) => r.id !== id),
         })),
+
+      updateReportShareToken: (id, token) =>
+        set((state) => ({
+          reports: state.reports.map((r) =>
+            r.id === id ? { ...r, shareToken: token, sharedAt: new Date().toISOString() } : r
+          ),
+        })),
+
+      getReportByShareToken: (token) => {
+        return get().reports.find((r) => r.shareToken === token);
+      },
 
       // App Settings
       appSettings: defaultAppSettings,

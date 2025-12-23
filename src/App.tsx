@@ -9,6 +9,7 @@ import StudentsPage from "./pages/StudentsPage";
 import AssessmentsPage from "./pages/AssessmentsPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
+import SharedReportPage from "./pages/SharedReportPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/assessments" element={<AssessmentsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/report/:shareToken" element={<SharedReportPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
