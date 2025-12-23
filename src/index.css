@@ -47,6 +47,13 @@
     --grade-4: 15 85% 55%;
     --grade-5: 45 90% 50%;
 
+    /* TISA Brand Colors */
+    --tisa-purple: 300 45% 40%;
+    --tisa-purple-light: 300 45% 95%;
+    --tisa-blue: 220 70% 35%;
+    --tisa-blue-light: 220 70% 95%;
+    --tisa-red: 350 75% 45%;
+
     --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
 
@@ -61,6 +68,7 @@
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(35 20% 98%));
     --gradient-warm: linear-gradient(135deg, hsl(15 85% 60%), hsl(45 95% 55%));
     --gradient-subtle: linear-gradient(180deg, hsl(40 30% 99%), hsl(35 20% 96%));
+    --gradient-tisa: linear-gradient(135deg, hsl(300 45% 40%), hsl(220 70% 35%));
 
     /* Shadows */
     --shadow-sm: 0 1px 2px hsl(220 25% 15% / 0.04);
