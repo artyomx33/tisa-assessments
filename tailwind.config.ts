@@ -72,6 +72,13 @@ export default {
           4: "hsl(var(--grade-4))",
           5: "hsl(var(--grade-5))",
         },
+        tisa: {
+          purple: "hsl(var(--tisa-purple))",
+          "purple-light": "hsl(var(--tisa-purple-light))",
+          blue: "hsl(var(--tisa-blue))",
+          "blue-light": "hsl(var(--tisa-blue-light))",
+          red: "hsl(var(--tisa-red))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare } from 'lucide-react';
+import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -42,6 +42,7 @@ import {
 import { StarRating } from '@/components/ui/StarRating';
 import { toast } from 'sonner';
 import type { StudentReport, ReportEntry, SubjectComment } from '@/types';
+import tisaLogo from '@/assets/tisa_logo.png';
 
 const reportFormSchema = z.object({
   studentId: z.string().min(1, 'Please select a student'),
@@ -786,9 +787,9 @@ export default function ReportsPage() {
           )}
         </div>
 
-        {/* View Report Dialog */}
+        {/* View Report Dialog - TISA Style */}
         <Dialog open={!!viewingReport} onOpenChange={(open) => !open && setViewingReport(null)}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 gap-0">
             {viewingReport && (() => {
               const reportStudent = students.find((s) => s.id === viewingReport.studentId);
               const reportAssessment = assessmentTemplates.find((a) => a.id === viewingReport.assessmentTemplateId);
@@ -796,59 +797,100 @@ export default function ReportsPage() {
               const { appSettings } = useAppStore.getState();
 
               return (
-                <>
-                  {/* Report Header */}
-                  <div className="text-center border-b pb-4">
-                    <h2 className="font-display text-lg font-bold uppercase tracking-wide">
-                      {viewingReport.reportTitle || 'STUDENT PROGRESS REPORT'} — {viewingReport.term}
-                    </h2>
+                <div className="bg-card">
+                  {/* TISA Purple Header Banner */}
+                  <div className="bg-tisa-purple text-white p-6 text-center">
+                    <div className="flex justify-center mb-4">
+                      <img src={tisaLogo} alt="TISA Logo" className="h-16 w-auto" />
+                    </div>
+                    <h1 className="font-display text-xl font-bold uppercase tracking-widest">
+                      {viewingReport.reportTitle || 'STUDENT PROGRESS REPORT'}
+                    </h1>
+                    <p className="text-white/90 font-medium mt-1">
+                      {viewingReport.term}
+                    </p>
                     {(viewingReport.periodStart || viewingReport.periodEnd) && (
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-white/80 text-sm mt-1">
                         Period: {viewingReport.periodStart} - {viewingReport.periodEnd}
                       </p>
                     )}
                   </div>
 
-                  <div className="space-y-6 py-4">
-                    {/* Student Information */}
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Student Information</h3>
-                      <div className="grid grid-cols-2 gap-2 text-sm bg-muted/30 rounded-lg p-3">
-                        <div><span className="text-muted-foreground">Full Name:</span> <strong>{reportStudent?.firstName} {reportStudent?.lastName}</strong></div>
-                        {reportStudent?.nameUsed && (
-                          <div><span className="text-muted-foreground">Name Used:</span> <strong>{reportStudent.nameUsed}</strong></div>
-                        )}
-                        <div><span className="text-muted-foreground">Grade Level:</span> <strong>{reportGrade?.name}</strong></div>
-                        {reportStudent?.dateOfBirth && (
-                          <div><span className="text-muted-foreground">Date of Birth:</span> <strong>{new Date(reportStudent.dateOfBirth).toLocaleDateString('en-GB')}</strong></div>
-                        )}
+                  <div className="p-6 space-y-6">
+                    {/* Student Information Section */}
+                    <div className="overflow-hidden rounded-lg border border-border">
+                      <div className="bg-tisa-blue text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide">
+                        Student Information
+                      </div>
+                      <div className="grid grid-cols-2 divide-x divide-border">
+                        <div className="divide-y divide-border">
+                          <div className="flex">
+                            <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Full Name</div>
+                            <div className="px-4 py-2 text-sm font-semibold flex-1">{reportStudent?.firstName} {reportStudent?.lastName}</div>
+                          </div>
+                          <div className="flex">
+                            <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Name Used</div>
+                            <div className="px-4 py-2 text-sm flex-1">{reportStudent?.nameUsed || '-'}</div>
+                          </div>
+                        </div>
+                        <div className="divide-y divide-border">
+                          <div className="flex">
+                            <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Grade Level</div>
+                            <div className="px-4 py-2 text-sm flex-1">{reportGrade?.name}</div>
+                          </div>
+                          <div className="flex">
+                            <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Date of Birth</div>
+                            <div className="px-4 py-2 text-sm flex-1">
+                              {reportStudent?.dateOfBirth 
+                                ? new Date(reportStudent.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                : '-'}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Teacher Information */}
-                    {reportGrade?.teacherAssignments && reportGrade.teacherAssignments.length > 0 && (
-                      <div className="space-y-2">
-                        <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Teacher Information</h3>
-                        <div className="bg-muted/30 rounded-lg p-3 space-y-3">
-                          {reportGrade.classroomTeacher && (
-                            <div className="text-sm"><span className="text-muted-foreground">Classroom Teacher:</span> <strong>{reportGrade.classroomTeacher}</strong></div>
-                          )}
-                          {reportGrade.teacherAssignments.filter(a => a.category === 'core').length > 0 && (
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-1">CORE PROGRAMME</p>
-                              <div className="grid grid-cols-2 gap-1 text-sm">
+                    {/* Teacher Information Section */}
+                    {(reportGrade?.classroomTeacher || (reportGrade?.teacherAssignments && reportGrade.teacherAssignments.length > 0)) && (
+                      <div className="overflow-hidden rounded-lg border border-border">
+                        <div className="bg-tisa-blue text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide">
+                          Teacher Information
+                        </div>
+                        <div className="divide-y divide-border">
+                          {/* Core Programme */}
+                          {reportGrade.teacherAssignments && reportGrade.teacherAssignments.filter(a => a.category === 'core').length > 0 && (
+                            <div className="grid grid-cols-[140px_1fr_1fr] text-sm">
+                              <div className="bg-tisa-purple-light px-4 py-2 font-semibold text-tisa-purple row-span-99 flex items-center border-r border-border">
+                                CORE PROGRAMME
+                              </div>
+                              <div className="col-span-2 divide-y divide-border">
+                                {reportGrade.classroomTeacher && (
+                                  <div className="grid grid-cols-2 divide-x divide-border">
+                                    <div className="bg-muted/30 px-4 py-1.5 font-medium">Classroom Teacher</div>
+                                    <div className="px-4 py-1.5">{reportGrade.classroomTeacher}</div>
+                                  </div>
+                                )}
                                 {reportGrade.teacherAssignments.filter(a => a.category === 'core').map((a) => (
-                                  <div key={a.id}><span className="text-muted-foreground">{a.subject}:</span> {a.teacher}</div>
+                                  <div key={a.id} className="grid grid-cols-2 divide-x divide-border">
+                                    <div className="bg-muted/30 px-4 py-1.5 font-medium">{a.subject}</div>
+                                    <div className="px-4 py-1.5">{a.teacher}</div>
+                                  </div>
                                 ))}
                               </div>
                             </div>
                           )}
-                          {reportGrade.teacherAssignments.filter(a => a.category === 'professional').length > 0 && (
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-1">PROFESSIONAL TRACKS</p>
-                              <div className="grid grid-cols-2 gap-1 text-sm">
+                          {/* Professional Tracks */}
+                          {reportGrade?.teacherAssignments && reportGrade.teacherAssignments.filter(a => a.category === 'professional').length > 0 && (
+                            <div className="grid grid-cols-[140px_1fr_1fr] text-sm">
+                              <div className="bg-tisa-purple-light px-4 py-2 font-semibold text-tisa-purple row-span-99 flex items-center border-r border-border">
+                                PROFESSIONAL TRACKS
+                              </div>
+                              <div className="col-span-2 divide-y divide-border">
                                 {reportGrade.teacherAssignments.filter(a => a.category === 'professional').map((a) => (
-                                  <div key={a.id}><span className="text-muted-foreground">{a.subject}:</span> {a.teacher}</div>
+                                  <div key={a.id} className="grid grid-cols-2 divide-x divide-border">
+                                    <div className="bg-muted/30 px-4 py-1.5 font-medium">{a.subject}</div>
+                                    <div className="px-4 py-1.5">{a.teacher}</div>
+                                  </div>
                                 ))}
                               </div>
                             </div>
@@ -857,26 +899,70 @@ export default function ReportsPage() {
                       </div>
                     )}
 
-                    {/* School Mission */}
-                    {appSettings.missionStatement && (
-                      <div className="space-y-2">
-                        <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Our Mission</h3>
-                        <p className="text-sm text-muted-foreground italic">{appSettings.missionStatement}</p>
-                        {appSettings.values.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {appSettings.values.map((value, i) => (
-                              <Badge key={i} variant="outline" className="text-xs">{value}</Badge>
-                            ))}
-                          </div>
-                        )}
+                    {/* School Mission, Vision & Values */}
+                    {(appSettings.missionStatement || appSettings.vision || appSettings.values.length > 0) && (
+                      <div className="overflow-hidden rounded-lg border border-tisa-purple/30 bg-tisa-purple-light">
+                        <div className="p-4 space-y-4">
+                          {appSettings.missionStatement && (
+                            <div>
+                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide mb-1">Our Mission</h4>
+                              <p className="text-sm text-foreground/80 italic">{appSettings.missionStatement}</p>
+                            </div>
+                          )}
+                          {appSettings.statement && (
+                            <div>
+                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide mb-1">Statement</h4>
+                              <p className="text-sm text-foreground/80 whitespace-pre-line">{appSettings.statement}</p>
+                            </div>
+                          )}
+                          {appSettings.vision && (
+                            <div>
+                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide mb-1">Our Vision</h4>
+                              <p className="text-sm text-foreground/80 whitespace-pre-line">{appSettings.vision}</p>
+                            </div>
+                          )}
+                          {appSettings.values.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide mb-2">Our Values</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {appSettings.values.map((value, i) => (
+                                  <span 
+                                    key={i} 
+                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-tisa-purple text-white"
+                                  >
+                                    {value}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
 
                     {/* Grading Key */}
                     {appSettings.gradingKey && (
-                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                        <h4 className="font-medium text-sm mb-1">Grading Key</h4>
-                        <p className="text-xs text-muted-foreground whitespace-pre-line">{appSettings.gradingKey}</p>
+                      <div className="overflow-hidden rounded-lg border border-star-filled/30 bg-star-filled/5">
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Star className="h-4 w-4 text-star-filled fill-star-filled" />
+                            <h4 className="font-semibold text-sm">Learner Profile - Grading Key</h4>
+                          </div>
+                          <div className="flex flex-wrap gap-4 text-sm">
+                            <div className="flex items-center gap-1">
+                              <span className="text-star-filled">⭐⭐⭐</span>
+                              <span className="text-muted-foreground">- Mostly</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-star-filled">⭐⭐</span>
+                              <span className="text-muted-foreground">- Usually</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-star-filled">⭐</span>
+                              <span className="text-muted-foreground">- Rarely</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -886,58 +972,65 @@ export default function ReportsPage() {
                       const subjectComment = viewingReport.subjectComments?.find((c) => c.subjectId === subject.id);
 
                       return (
-                        <div key={subject.id} className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-foreground">{subject.name}</h3>
+                        <div key={subject.id} className="overflow-hidden rounded-lg border border-border">
+                          <div className="bg-tisa-blue text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide flex items-center justify-between">
+                            <span>{subject.name}</span>
                             {subjectComment?.attitudeTowardsLearning && (
-                              <Badge variant="outline" className="text-xs">
+                              <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
                                 {subjectComment.attitudeTowardsLearning}
-                              </Badge>
+                              </span>
                             )}
                           </div>
-
-                          <div className="space-y-2 pl-4 border-l-2 border-muted">
-                            {subject.assessmentPoints.map((point) => {
+                          <div className="divide-y divide-border">
+                            {subject.assessmentPoints.map((point, idx) => {
                               const entry = subjectEntries.find((e) => e.assessmentPointId === point.id);
                               return (
-                                <div key={point.id} className="flex items-start justify-between gap-4 py-1">
-                                  <span className="text-sm text-muted-foreground flex-1">{point.name}</span>
+                                <div 
+                                  key={point.id} 
+                                  className={`flex items-center justify-between px-4 py-2 ${idx % 2 === 0 ? 'bg-card' : 'bg-muted/20'}`}
+                                >
+                                  <span className="text-sm text-foreground">{point.name}</span>
                                   <StarRating value={entry?.stars || 0} max={point.maxStars} readonly size="sm" />
                                 </div>
                               );
                             })}
                           </div>
-
                           {(subjectComment?.teacherComment || subjectComment?.aiRewrittenComment) && (
-                            <div className="bg-muted/50 rounded-lg p-3 text-sm">
-                              <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                            <div className="border-t border-border bg-muted/30 px-4 py-3">
+                              <div className="flex items-center gap-2 mb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                                 <MessageSquare className="h-3 w-3" />
-                                Comment
+                                Teacher Comment
                               </div>
-                              <p className="text-foreground">{subjectComment.aiRewrittenComment || subjectComment.teacherComment}</p>
+                              <p className="text-sm text-foreground">{subjectComment.aiRewrittenComment || subjectComment.teacherComment}</p>
                             </div>
                           )}
                         </div>
                       );
                     })}
 
+                    {/* General Comment */}
                     {viewingReport.generalComment && (
-                      <div className="border-t pt-4">
-                        <h3 className="font-semibold text-foreground mb-2">General Comment</h3>
-                        <div className="bg-muted/50 rounded-lg p-3 text-sm text-foreground">{viewingReport.generalComment}</div>
+                      <div className="overflow-hidden rounded-lg border border-border">
+                        <div className="bg-tisa-purple text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide">
+                          General Comment
+                        </div>
+                        <div className="p-4 bg-card">
+                          <p className="text-sm text-foreground leading-relaxed">{viewingReport.generalComment}</p>
+                        </div>
                       </div>
                     )}
 
-                    <div className="border-t pt-4 text-xs text-muted-foreground flex items-center justify-between">
-                      <span>Created: {new Date(viewingReport.createdAt).toLocaleDateString()}</span>
-                      <span>Updated: {new Date(viewingReport.updatedAt).toLocaleDateString()}</span>
+                    {/* Footer */}
+                    <div className="border-t border-border pt-4 text-xs text-muted-foreground flex items-center justify-between">
+                      <span>Report created: {new Date(viewingReport.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                      <span>Last updated: {new Date(viewingReport.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
                     </div>
                   </div>
 
-                  <DialogFooter>
+                  <div className="border-t border-border p-4 bg-muted/30 flex justify-end">
                     <Button variant="outline" onClick={() => setViewingReport(null)}>Close</Button>
-                  </DialogFooter>
-                </>
+                  </div>
+                </div>
               );
             })()}
           </DialogContent>
