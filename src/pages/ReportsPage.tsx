@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, ChevronRight, Sparkles, Save, Eye } from 'lucide-react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen } from 'lucide-react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -34,36 +34,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { StarRating } from '@/components/ui/StarRating';
 import { toast } from 'sonner';
-import type { StudentReport, ReportEntry } from '@/types';
+import type { StudentReport, ReportEntry, Subject } from '@/types';
 
 const reportFormSchema = z.object({
   studentId: z.string().min(1, 'Please select a student'),
   assessmentTemplateId: z.string().min(1, 'Please select an assessment'),
-  term: z.number().min(1).max(4),
-  entries: z.array(
-    z.object({
-      assessmentPointId: z.string(),
-      stars: z.number().min(0).max(5),
-      teacherNotes: z.string().optional(),
-      aiRewrittenText: z.string().optional(),
-    })
-  ),
+  term: z.string().default('Term 1 & 2'),
 });
 
 type ReportFormValues = z.infer<typeof reportFormSchema>;
+
+// Separate state for entries since they're dynamic
+interface EntryState {
+  [key: string]: {
+    stars: number;
+    teacherNotes: string;
+    aiRewrittenText: string;
+  };
+}
 
 export default function ReportsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('');
-  const [viewingReport, setViewingReport] = useState<StudentReport | null>(null);
+  const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
+  const [entries, setEntries] = useState<EntryState>({});
 
   const {
     reports,
     addReport,
-    updateReport,
     students,
     assessmentTemplates,
     grades,
@@ -82,28 +88,25 @@ export default function ReportsPage() {
     defaultValues: {
       studentId: '',
       assessmentTemplateId: '',
-      term: 1,
-      entries: [],
+      term: 'Term 1 & 2',
     },
   });
 
-  const { fields, replace } = useFieldArray({
-    control: form.control,
-    name: 'entries',
-  });
+  const toggleSubject = (subjectId: string) => {
+    setExpandedSubjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(subjectId)) {
+        next.delete(subjectId);
+      } else {
+        next.add(subjectId);
+      }
+      return next;
+    });
+  };
 
   const handleStudentChange = (studentId: string) => {
     setSelectedStudentId(studentId);
     form.setValue('studentId', studentId);
-    
-    // Filter assessments for this student's grade
-    const student = activeStudents.find((s) => s.id === studentId);
-    if (student) {
-      const gradeAssessments = activeAssessments.filter((a) => a.gradeId === student.gradeId);
-      if (gradeAssessments.length > 0 && !selectedAssessmentId) {
-        // Don't auto-select, let user choose
-      }
-    }
   };
 
   const handleAssessmentChange = (assessmentId: string) => {
@@ -112,30 +115,49 @@ export default function ReportsPage() {
     
     const assessment = activeAssessments.find((a) => a.id === assessmentId);
     if (assessment) {
-      // Initialize entries for each assessment point
-      const entries: ReportEntry[] = assessment.points.map((point) => ({
-        assessmentPointId: point.id,
-        stars: 0,
-        teacherNotes: '',
-        aiRewrittenText: '',
-      }));
-      replace(entries);
+      // Initialize entries for each assessment point across all subjects
+      const newEntries: EntryState = {};
+      assessment.subjects?.forEach((subject) => {
+        subject.assessmentPoints?.forEach((point) => {
+          const key = `${subject.id}:${point.id}`;
+          newEntries[key] = {
+            stars: 0,
+            teacherNotes: '',
+            aiRewrittenText: '',
+          };
+        });
+        // Expand all subjects by default
+        setExpandedSubjects((prev) => new Set([...prev, subject.id]));
+      });
+      setEntries(newEntries);
     }
+  };
+
+  const updateEntry = (subjectId: string, pointId: string, field: keyof EntryState[string], value: string | number) => {
+    const key = `${subjectId}:${pointId}`;
+    setEntries((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        [field]: value,
+      },
+    }));
   };
 
   const openCreateDialog = () => {
     setSelectedStudentId('');
     setSelectedAssessmentId('');
+    setEntries({});
+    setExpandedSubjects(new Set());
     form.reset({
       studentId: '',
       assessmentTemplateId: '',
-      term: 1,
-      entries: [],
+      term: 'Term 1 & 2',
     });
     setIsDialogOpen(true);
   };
 
-  const simulateAIRewrite = (text: string, index: number) => {
+  const simulateAIRewrite = (text: string, subjectId: string, pointId: string) => {
     if (!text.trim()) {
       toast.error('Please enter some notes first');
       return;
@@ -144,18 +166,30 @@ export default function ReportsPage() {
     // Simulate AI rewrite (placeholder for actual AI integration)
     const tisaVoice = `${text.charAt(0).toUpperCase()}${text.slice(1)}. The student shows consistent effort and demonstrates a positive attitude towards learning. We encourage continued practice at home.`;
     
-    form.setValue(`entries.${index}.aiRewrittenText`, tisaVoice);
+    updateEntry(subjectId, pointId, 'aiRewrittenText', tisaVoice);
     toast.success('Text rewritten in TISA voice!');
   };
 
   const onSubmit = (data: ReportFormValues) => {
+    // Convert entries to array format
+    const entryArray: ReportEntry[] = Object.entries(entries).map(([key, value]) => {
+      const [subjectId, pointId] = key.split(':');
+      return {
+        assessmentPointId: pointId,
+        subjectId,
+        stars: value.stars,
+        teacherNotes: value.teacherNotes,
+        aiRewrittenText: value.aiRewrittenText,
+      };
+    });
+
     const newReport: StudentReport = {
       id: crypto.randomUUID(),
       studentId: data.studentId,
       assessmentTemplateId: data.assessmentTemplateId,
       schoolYearId: activeSchoolYearId!,
       term: data.term,
-      entries: data.entries,
+      entries: entryArray,
       status: 'draft',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -165,16 +199,7 @@ export default function ReportsPage() {
     toast.success('Report saved successfully');
     setIsDialogOpen(false);
     form.reset();
-  };
-
-  const getStudentName = (studentId: string) => {
-    const student = students.find((s) => s.id === studentId);
-    return student ? `${student.firstName} ${student.lastName}` : 'Unknown';
-  };
-
-  const getAssessmentName = (assessmentId: string) => {
-    const assessment = assessmentTemplates.find((a) => a.id === assessmentId);
-    return assessment?.name || 'Unknown';
+    setEntries({});
   };
 
   const getGradeInfo = (gradeId: string) => grades.find((g) => g.id === gradeId);
@@ -182,6 +207,8 @@ export default function ReportsPage() {
   const availableAssessments = selectedStudent
     ? activeAssessments.filter((a) => a.gradeId === selectedStudent.gradeId)
     : [];
+
+  const hasEntries = Object.keys(entries).length > 0;
 
   return (
     <AppLayout>
@@ -201,7 +228,7 @@ export default function ReportsPage() {
                 New Report
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create Student Report</DialogTitle>
                 <DialogDescription>
@@ -290,20 +317,19 @@ export default function ReportsPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Term</FormLabel>
-                          <Select
-                            value={String(field.value)}
-                            onValueChange={(val) => field.onChange(Number(val))}
-                          >
+                          <Select value={field.value} onValueChange={field.onChange}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="1">Term 1</SelectItem>
-                              <SelectItem value="2">Term 2</SelectItem>
-                              <SelectItem value="3">Term 3</SelectItem>
-                              <SelectItem value="4">Term 4</SelectItem>
+                              <SelectItem value="Term 1">Term 1</SelectItem>
+                              <SelectItem value="Term 2">Term 2</SelectItem>
+                              <SelectItem value="Term 1 & 2">Term 1 & 2</SelectItem>
+                              <SelectItem value="Term 3">Term 3</SelectItem>
+                              <SelectItem value="Term 4">Term 4</SelectItem>
+                              <SelectItem value="Term 3 & 4">Term 3 & 4</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -312,116 +338,120 @@ export default function ReportsPage() {
                     />
                   </div>
 
-                  {/* Assessment Points */}
-                  {selectedAssessment && fields.length > 0 && (
+                  {/* Assessment Subjects & Points */}
+                  {selectedAssessment && hasEntries && (
                     <div className="space-y-4">
-                      <h3 className="font-display font-semibold">Assessment Points</h3>
-                      <AnimatePresence>
-                        {fields.map((field, index) => {
-                          const point = selectedAssessment.points.find(
-                            (p) => p.id === field.assessmentPointId
-                          );
-                          if (!point) return null;
-
-                          return (
-                            <motion.div
-                              key={field.id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.05 }}
-                            >
-                              <Card>
-                                <CardHeader className="pb-3">
-                                  <div className="flex items-center justify-between">
+                      <h3 className="font-display font-semibold">Assessment Subjects</h3>
+                      {selectedAssessment.subjects?.map((subject) => (
+                        <Collapsible
+                          key={subject.id}
+                          open={expandedSubjects.has(subject.id)}
+                          onOpenChange={() => toggleSubject(subject.id)}
+                        >
+                          <CollapsibleTrigger asChild>
+                            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+                              <CardHeader className="p-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <BookOpen className="h-5 w-5 text-primary" />
                                     <div>
-                                      <CardTitle className="text-base">{point.label}</CardTitle>
-                                      {point.description && (
-                                        <CardDescription>{point.description}</CardDescription>
+                                      <CardTitle className="text-base">{subject.name}</CardTitle>
+                                      {subject.description && (
+                                        <CardDescription>{subject.description}</CardDescription>
                                       )}
                                     </div>
-                                    <FormField
-                                      control={form.control}
-                                      name={`entries.${index}.stars`}
-                                      render={({ field: starField }) => (
-                                        <StarRating
-                                          value={starField.value}
-                                          max={point.maxStars}
-                                          onChange={starField.onChange}
-                                          size="lg"
-                                        />
-                                      )}
-                                    />
                                   </div>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                  <FormField
-                                    control={form.control}
-                                    name={`entries.${index}.teacherNotes`}
-                                    render={({ field: notesField }) => (
-                                      <FormItem>
-                                        <FormLabel className="text-sm text-muted-foreground">
-                                          Teacher Notes
-                                        </FormLabel>
-                                        <FormControl>
-                                          <Textarea
-                                            placeholder="Enter your observations for this assessment point..."
-                                            className="min-h-[80px]"
-                                            {...notesField}
-                                          />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-
                                   <div className="flex items-center gap-2">
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      className="gap-2"
-                                      onClick={() =>
-                                        simulateAIRewrite(
-                                          form.getValues(`entries.${index}.teacherNotes`) || '',
-                                          index
-                                        )
-                                      }
-                                    >
-                                      <Sparkles className="h-3.5 w-3.5 text-accent" />
-                                      Rewrite in TISA Voice
-                                    </Button>
+                                    <Badge variant="outline">
+                                      {subject.assessmentPoints?.length || 0} points
+                                    </Badge>
+                                    {expandedSubjects.has(subject.id) ? (
+                                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                    )}
                                   </div>
+                                </div>
+                              </CardHeader>
+                            </Card>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="ml-4 mt-2 space-y-3 border-l-2 border-primary/20 pl-4">
+                              {subject.assessmentPoints?.map((point) => {
+                                const key = `${subject.id}:${point.id}`;
+                                const entry = entries[key];
+                                
+                                return (
+                                  <motion.div
+                                    key={point.id}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                  >
+                                    <Card>
+                                      <CardHeader className="pb-3">
+                                        <div className="flex items-center justify-between">
+                                          <CardTitle className="text-sm font-medium">
+                                            {point.name}
+                                          </CardTitle>
+                                          <StarRating
+                                            value={entry?.stars || 0}
+                                            max={point.maxStars}
+                                            onChange={(val) => updateEntry(subject.id, point.id, 'stars', val)}
+                                            size="md"
+                                          />
+                                        </div>
+                                      </CardHeader>
+                                      <CardContent className="space-y-3">
+                                        <div>
+                                          <label className="mb-1.5 block text-sm text-muted-foreground">
+                                            Teacher Notes
+                                          </label>
+                                          <Textarea
+                                            placeholder="Enter your observations..."
+                                            className="min-h-[60px]"
+                                            value={entry?.teacherNotes || ''}
+                                            onChange={(e) => updateEntry(subject.id, point.id, 'teacherNotes', e.target.value)}
+                                          />
+                                        </div>
 
-                                  <FormField
-                                    control={form.control}
-                                    name={`entries.${index}.aiRewrittenText`}
-                                    render={({ field: aiField }) =>
-                                      aiField.value ? (
-                                        <motion.div
-                                          initial={{ opacity: 0, height: 0 }}
-                                          animate={{ opacity: 1, height: 'auto' }}
-                                        >
-                                          <FormItem>
-                                            <FormLabel className="flex items-center gap-2 text-sm">
+                                        <div className="flex items-center gap-2">
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-2"
+                                            onClick={() => simulateAIRewrite(entry?.teacherNotes || '', subject.id, point.id)}
+                                          >
+                                            <Sparkles className="h-3.5 w-3.5 text-accent" />
+                                            Rewrite in TISA Voice
+                                          </Button>
+                                        </div>
+
+                                        {entry?.aiRewrittenText && (
+                                          <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                          >
+                                            <label className="mb-1.5 flex items-center gap-2 text-sm">
                                               <Sparkles className="h-3.5 w-3.5 text-accent" />
                                               AI Rewritten (TISA Voice)
-                                            </FormLabel>
-                                            <FormControl>
-                                              <Textarea
-                                                className="min-h-[80px] bg-accent-light border-accent/20"
-                                                {...aiField}
-                                              />
-                                            </FormControl>
-                                          </FormItem>
-                                        </motion.div>
-                                      ) : null
-                                    }
-                                  />
-                                </CardContent>
-                              </Card>
-                            </motion.div>
-                          );
-                        })}
-                      </AnimatePresence>
+                                            </label>
+                                            <Textarea
+                                              className="min-h-[60px] bg-accent/5 border-accent/20"
+                                              value={entry.aiRewrittenText}
+                                              onChange={(e) => updateEntry(subject.id, point.id, 'aiRewrittenText', e.target.value)}
+                                            />
+                                          </motion.div>
+                                        )}
+                                      </CardContent>
+                                    </Card>
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
                     </div>
                   )}
 
@@ -437,7 +467,7 @@ export default function ReportsPage() {
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={fields.length === 0} className="gap-2">
+                    <Button type="submit" disabled={!hasEntries} className="gap-2">
                       <Save className="h-4 w-4" />
                       Save Report
                     </Button>
@@ -496,8 +526,8 @@ export default function ReportsPage() {
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center justify-between text-sm text-muted-foreground">
-                          <span>Term {report.term}</span>
-                          <span>{report.entries.length} points</span>
+                          <span>{report.term}</span>
+                          <span>{report.entries.length} entries</span>
                         </div>
                         <div className="mt-3 flex items-center gap-2">
                           <Button variant="outline" size="sm" className="flex-1 gap-2">
