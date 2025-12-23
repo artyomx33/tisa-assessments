@@ -77,6 +77,7 @@ export default function ReportsPage() {
   const [entries, setEntries] = useState<EntryState>({});
   const [subjectComments, setSubjectComments] = useState<SubjectCommentState>({});
   const [generalComment, setGeneralComment] = useState('');
+  const [viewingReport, setViewingReport] = useState<StudentReport | null>(null);
   const [generalCommentAI, setGeneralCommentAI] = useState('');
 
   const {
@@ -749,7 +750,12 @@ export default function ReportsPage() {
                           <span>{report.entries.length} entries</span>
                         </div>
                         <div className="mt-3 flex items-center gap-2">
-                          <Button variant="outline" size="sm" className="flex-1 gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex-1 gap-2"
+                            onClick={() => setViewingReport(report)}
+                          >
                             <Eye className="h-3.5 w-3.5" />
                             View
                           </Button>
@@ -779,6 +785,119 @@ export default function ReportsPage() {
             </motion.div>
           )}
         </div>
+
+        {/* View Report Dialog */}
+        <Dialog open={!!viewingReport} onOpenChange={(open) => !open && setViewingReport(null)}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            {viewingReport && (() => {
+              const reportStudent = students.find((s) => s.id === viewingReport.studentId);
+              const reportAssessment = assessmentTemplates.find((a) => a.id === viewingReport.assessmentTemplateId);
+              const reportGrade = reportStudent ? getGradeInfo(reportStudent.gradeId) : null;
+
+              return (
+                <>
+                  <DialogHeader>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-3 w-3 rounded-full"
+                        style={{
+                          backgroundColor: reportGrade
+                            ? `hsl(var(--grade-${reportGrade.colorIndex}))`
+                            : 'hsl(var(--muted))',
+                        }}
+                      />
+                      <DialogTitle>
+                        {reportStudent
+                          ? `${reportStudent.firstName} ${reportStudent.lastName}`
+                          : 'Unknown Student'}
+                      </DialogTitle>
+                      <Badge variant={viewingReport.status === 'completed' ? 'default' : 'secondary'}>
+                        {viewingReport.status}
+                      </Badge>
+                    </div>
+                    <DialogDescription>
+                      {reportAssessment?.name} • {viewingReport.term} • {reportGrade?.name || 'Unknown Grade'}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-6 py-4">
+                    {/* Subjects and Assessment Points */}
+                    {reportAssessment?.subjects.map((subject) => {
+                      const subjectEntries = viewingReport.entries.filter((e) => e.subjectId === subject.id);
+                      const subjectComment = viewingReport.subjectComments?.find((c) => c.subjectId === subject.id);
+
+                      return (
+                        <div key={subject.id} className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-foreground">{subject.name}</h3>
+                            {subjectComment?.attitudeTowardsLearning && (
+                              <Badge variant="outline" className="text-xs">
+                                {subjectComment.attitudeTowardsLearning}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Assessment Points */}
+                          <div className="space-y-2 pl-4 border-l-2 border-muted">
+                            {subject.assessmentPoints.map((point) => {
+                              const entry = subjectEntries.find((e) => e.assessmentPointId === point.id);
+                              return (
+                                <div key={point.id} className="flex items-start justify-between gap-4 py-1">
+                                  <span className="text-sm text-muted-foreground flex-1">{point.name}</span>
+                                  <StarRating
+                                    value={entry?.stars || 0}
+                                    max={point.maxStars}
+                                    readonly
+                                    size="sm"
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Subject Comment */}
+                          {(subjectComment?.teacherComment || subjectComment?.aiRewrittenComment) && (
+                            <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                              <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                                <MessageSquare className="h-3 w-3" />
+                                Comment
+                              </div>
+                              <p className="text-foreground">
+                                {subjectComment.aiRewrittenComment || subjectComment.teacherComment}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* General Comment */}
+                    {viewingReport.generalComment && (
+                      <div className="border-t pt-4">
+                        <h3 className="font-semibold text-foreground mb-2">General Comment</h3>
+                        <div className="bg-muted/50 rounded-lg p-3 text-sm text-foreground">
+                          {viewingReport.generalComment}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Report Metadata */}
+                    <div className="border-t pt-4 text-xs text-muted-foreground flex items-center justify-between">
+                      <span>Created: {new Date(viewingReport.createdAt).toLocaleDateString()}</span>
+                      <span>Updated: {new Date(viewingReport.updatedAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setViewingReport(null)}>
+                      Close
+                    </Button>
+                  </DialogFooter>
+                </>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
