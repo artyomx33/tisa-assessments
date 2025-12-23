@@ -327,20 +327,30 @@ export default function ReportsPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {activeStudents.map((student) => {
-                                const grade = getGradeInfo(student.gradeId);
-                                return (
-                                  <SelectItem key={student.id} value={student.id}>
-                                    <div className="flex items-center gap-2">
-                                      <div
-                                        className="h-2 w-2 rounded-full"
-                                        style={{ backgroundColor: grade ? `hsl(var(--grade-${grade.colorIndex}))` : undefined }}
-                                      />
-                                      {student.firstName} {student.lastName}
-                                    </div>
-                                  </SelectItem>
-                                );
-                              })}
+                              {activeStudents.length === 0 ? (
+                                <div className="p-2 text-sm text-muted-foreground text-center">
+                                  No students found. Add students first.
+                                </div>
+                              ) : (
+                                activeStudents.map((student) => {
+                                  const grade = getGradeInfo(student.gradeId);
+                                  const hasTemplate = activeAssessments.some(a => a.gradeId === student.gradeId);
+                                  return (
+                                    <SelectItem key={student.id} value={student.id}>
+                                      <div className="flex items-center gap-2">
+                                        <div
+                                          className="h-2 w-2 rounded-full"
+                                          style={{ backgroundColor: grade ? `hsl(var(--grade-${grade.colorIndex}))` : undefined }}
+                                        />
+                                        {student.firstName} {student.lastName}
+                                        {!hasTemplate && (
+                                          <span className="text-xs text-muted-foreground">(no template)</span>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
