@@ -103,6 +103,43 @@ export const subjectCommentSchema = z.object({
 
 export type SubjectComment = z.infer<typeof subjectCommentSchema>;
 
+// Exam Result Schema (for Tests & Exams table)
+export const examResultSchema = z.object({
+  id: z.string(),
+  term: z.string(),              // "Term 1", "Term 2"
+  date: z.string(),              // "10/2025" format
+  title: z.string(),             // "Assessment of term skills"
+  subject: z.string(),           // "English", "Math", etc.
+  grade: z.number().min(0).max(3), // 0-3 stars
+  isNA: z.boolean().optional(),
+});
+
+export type ExamResult = z.infer<typeof examResultSchema>;
+
+// Report Reflection Schema (editable by parents/students via shared link)
+export const reportReflectionSchema = z.object({
+  parentReflection: z.string().optional(),
+  parentSignedAt: z.string().optional(),
+  studentReflection: z.string().optional(),
+  studentSignedAt: z.string().optional(),
+});
+
+export type ReportReflection = z.infer<typeof reportReflectionSchema>;
+
+// Report Signature Schema (digital signatures with cursive display)
+export const reportSignatureSchema = z.object({
+  classroomTeacher: z.object({
+    name: z.string(),
+    signedAt: z.string(),
+  }).optional(),
+  headOfSchool: z.object({
+    name: z.string(),
+    signedAt: z.string(),
+  }).optional(),
+});
+
+export type ReportSignature = z.infer<typeof reportSignatureSchema>;
+
 // Student Report Schema
 export const studentReportSchema = z.object({
   id: z.string(),
@@ -119,6 +156,10 @@ export const studentReportSchema = z.object({
   status: z.enum(['draft', 'completed', 'reviewed']).default('draft'),
   shareToken: z.string().optional(),
   sharedAt: z.string().optional(),
+  // Phase 1: New fields for exam results, reflections, and signatures
+  examResults: z.array(examResultSchema).optional(),
+  reflections: reportReflectionSchema.optional(),
+  signatures: reportSignatureSchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
