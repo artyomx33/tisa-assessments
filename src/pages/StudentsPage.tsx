@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Pencil, Trash2, Users, Search, UserCircle, CalendarDays } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Search } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +10,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Calendar } from '@/components/ui/calendar';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Dialog,
   DialogContent,
@@ -35,13 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 const studentFormSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -214,41 +208,15 @@ export default function StudentsPage() {
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Date of Birth</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "dd-MM-yyyy")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) =>
-                                date > new Date() || date < new Date("1900-01-01")
-                              }
-                              initialFocus
-                              className="p-3 pointer-events-auto"
-                              captionLayout="dropdown-buttons"
-                              fromYear={2010}
-                              toYear={new Date().getFullYear()}
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <FormControl>
+                          <DatePicker
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select date of birth"
+                            maxDate={new Date()}
+                            minDate={new Date("2005-01-01")}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
