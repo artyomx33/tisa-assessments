@@ -1,16 +1,32 @@
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Star, FileText } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Star, FileText, Save, MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
 import tisaLogo from '@/assets/tisa_logo.png';
 
 export default function SharedReportPage() {
   const { shareToken } = useParams<{ shareToken: string }>();
-  const { reports, students, assessmentTemplates, grades, appSettings } = useAppStore();
+  const { reports, students, assessmentTemplates, grades, appSettings, updateReportReflection } = useAppStore();
+
+  const [parentReflection, setParentReflection] = useState('');
+  const [studentReflection, setStudentReflection] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   // Find the report by share token
   const report = reports.find((r) => r.shareToken === shareToken);
+
+  // Initialize reflections from report when found
+  useState(() => {
+    if (report?.reflections) {
+      setParentReflection(report.reflections.parentReflection || '');
+      setStudentReflection(report.reflections.studentReflection || '');
+    }
+  });
 
   if (!report) {
     return (
@@ -32,6 +48,19 @@ export default function SharedReportPage() {
   const assessment = assessmentTemplates.find((a) => a.id === report.assessmentTemplateId);
   const grade = student ? grades.find((g) => g.id === student.gradeId) : null;
 
+  const handleSaveReflection = (type: 'parent' | 'student') => {
+    if (!shareToken) return;
+    setIsSaving(true);
+    
+    const reflections = type === 'parent' 
+      ? { parentReflection, parentSignedAt: new Date().toISOString() }
+      : { studentReflection, studentSignedAt: new Date().toISOString() };
+    
+    updateReportReflection(shareToken, reflections);
+    toast.success(`${type === 'parent' ? 'Parent' : 'Student'} reflection saved!`);
+    setIsSaving(false);
+  };
+
   const renderStars = (count: number, max: number = 3, isNA?: boolean) => {
     if (isNA) {
       return <span className="text-sm text-muted-foreground font-medium">N/A</span>;
@@ -52,6 +81,13 @@ export default function SharedReportPage() {
     );
   };
 
+  // Group exam results by term
+  const examResultsByTerm = (report.examResults || []).reduce((acc, result) => {
+    if (!acc[result.term]) acc[result.term] = [];
+    acc[result.term].push(result);
+    return acc;
+  }, {} as Record<string, typeof report.examResults>);
+
   return (
     <div className="min-h-screen bg-muted/30">
       <div className="max-w-4xl mx-auto">
@@ -63,15 +99,13 @@ export default function SharedReportPage() {
         </div>
 
         <div className="bg-card shadow-lg">
-          {/* TISA Purple Header Banner - Horizontal Layout */}
+          {/* TISA Purple Header Banner */}
           <div className="bg-tisa-purple text-white p-4 flex items-center justify-between">
             <div className="text-left">
               <h1 className="font-display text-xl font-bold uppercase tracking-widest">
                 {report.reportTitle || 'STUDENT PROGRESS REPORT'}
               </h1>
-              <p className="text-white/90 font-medium mt-1">
-                {report.term}
-              </p>
+              <p className="text-white/90 font-medium mt-1">{report.term}</p>
               {(report.periodStart || report.periodEnd) && (
                 <p className="text-white/80 text-sm mt-0.5">
                   Period: {report.periodStart} - {report.periodEnd}
@@ -122,7 +156,6 @@ export default function SharedReportPage() {
                   Teacher Information
                 </div>
                 <div className="divide-y divide-border">
-                  {/* Core Programme */}
                   {grade.teacherAssignments && grade.teacherAssignments.filter(a => a.category === 'core').length > 0 && (
                     <div className="grid grid-cols-[140px_1fr_1fr] text-sm">
                       <div className="bg-tisa-purple/10 px-4 py-2 font-semibold text-tisa-purple row-span-99 flex items-center border-r border-border">
@@ -138,7 +171,6 @@ export default function SharedReportPage() {
                       </div>
                     </div>
                   )}
-                  {/* Professional Tracks */}
                   {grade.teacherAssignments && grade.teacherAssignments.filter(a => a.category === 'professional').length > 0 && (
                     <div className="grid grid-cols-[140px_1fr_1fr] text-sm">
                       <div className="bg-tisa-purple/10 px-4 py-2 font-semibold text-tisa-purple row-span-99 flex items-center border-r border-border">
@@ -219,7 +251,6 @@ export default function SharedReportPage() {
                     )}
                   </div>
                   <div className="divide-y divide-border">
-                    {/* Assessment Points */}
                     {subjectEntries.map((entry) => {
                       const point = subject.assessmentPoints.find((p) => p.id === entry.assessmentPointId);
                       if (!point) return null;
@@ -232,7 +263,6 @@ export default function SharedReportPage() {
                       );
                     })}
                     
-                    {/* Subject Comment */}
                     {(subjectComment?.aiRewrittenComment || subjectComment?.teacherComment) && (
                       <div className="p-4 bg-muted/30">
                         <p className="text-sm text-muted-foreground leading-relaxed">
@@ -245,6 +275,38 @@ export default function SharedReportPage() {
               );
             })}
 
+            {/* Tests and Exams Results */}
+            {report.examResults && report.examResults.length > 0 && (
+              <div className="overflow-hidden rounded-lg border border-border">
+                <div className="bg-tisa-purple text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide">
+                  Tests and Exams Results
+                </div>
+                {Object.entries(examResultsByTerm).map(([term, results]) => (
+                  <div key={term}>
+                    <div className="bg-tisa-blue/80 text-white px-4 py-1.5 text-sm font-medium">
+                      {term}
+                    </div>
+                    <div className="divide-y divide-border">
+                      <div className="grid grid-cols-[80px_1fr_120px_80px] px-4 py-1.5 bg-muted/50 text-xs font-medium text-muted-foreground">
+                        <span>Date</span>
+                        <span>Title</span>
+                        <span>Subject</span>
+                        <span>Grade</span>
+                      </div>
+                      {results?.map((result) => (
+                        <div key={result.id} className="grid grid-cols-[80px_1fr_120px_80px] px-4 py-2 items-center text-sm bg-card">
+                          <span>{result.date}</span>
+                          <span>{result.title}</span>
+                          <span>{result.subject}</span>
+                          {renderStars(result.grade, 3)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* General Comment */}
             {report.generalComment && (
               <div className="overflow-hidden rounded-lg border border-border">
@@ -253,6 +315,95 @@ export default function SharedReportPage() {
                 </div>
                 <div className="p-4 bg-card">
                   <p className="text-sm text-foreground leading-relaxed">{report.generalComment}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Reflections Section - Editable! */}
+            <div className="overflow-hidden rounded-lg border border-border">
+              <div className="bg-tisa-blue text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Reflections
+              </div>
+              <div className="p-4 space-y-4 bg-card">
+                {/* Parent Reflection */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Parent's Reflection</label>
+                  <Textarea
+                    placeholder="Share your thoughts on your child's progress..."
+                    value={parentReflection}
+                    onChange={(e) => setParentReflection(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                  <div className="flex justify-end mt-2">
+                    <Button size="sm" onClick={() => handleSaveReflection('parent')} disabled={isSaving} className="gap-2">
+                      <Save className="h-4 w-4" />
+                      Save Reflection
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Student Reflection */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Student's Reflection</label>
+                  <Textarea
+                    placeholder="Share your thoughts on your learning this term..."
+                    value={studentReflection}
+                    onChange={(e) => setStudentReflection(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                  <div className="flex justify-end mt-2">
+                    <Button size="sm" onClick={() => handleSaveReflection('student')} disabled={isSaving} className="gap-2">
+                      <Save className="h-4 w-4" />
+                      Save Reflection
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Signatures */}
+            {report.signatures && (report.signatures.classroomTeacher || report.signatures.headOfSchool) && (
+              <div className="overflow-hidden rounded-lg border border-border">
+                <div className="bg-tisa-purple text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide">
+                  Signatures
+                </div>
+                <div className="p-6 bg-card">
+                  <div className="grid grid-cols-2 gap-8">
+                    {/* Classroom Teacher */}
+                    <div className="text-center space-y-2">
+                      {report.signatures.classroomTeacher && (
+                        <>
+                          <div className="h-16 flex items-center justify-center">
+                            <span className="font-cursive text-3xl text-foreground">
+                              {report.signatures.classroomTeacher.name}
+                            </span>
+                          </div>
+                          <div className="border-t border-foreground pt-2">
+                            <p className="font-medium text-sm">{report.signatures.classroomTeacher.name}</p>
+                            <p className="text-xs text-muted-foreground">Classroom Teacher</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Head of School */}
+                    <div className="text-center space-y-2">
+                      {report.signatures.headOfSchool && (
+                        <>
+                          <div className="h-16 flex items-center justify-center">
+                            <span className="font-cursive text-3xl text-foreground">
+                              {report.signatures.headOfSchool.name}
+                            </span>
+                          </div>
+                          <div className="border-t border-foreground pt-2">
+                            <p className="font-medium text-sm">{report.signatures.headOfSchool.name}</p>
+                            <p className="text-xs text-muted-foreground">Head of School</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

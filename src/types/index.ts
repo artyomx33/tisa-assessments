@@ -103,6 +103,43 @@ export const subjectCommentSchema = z.object({
 
 export type SubjectComment = z.infer<typeof subjectCommentSchema>;
 
+// Exam Result Entry
+export const examResultSchema = z.object({
+  id: z.string(),
+  term: z.string(),
+  date: z.string(),
+  title: z.string(),
+  subject: z.string(),
+  grade: z.number().min(0).max(3),
+  isNA: z.boolean().optional(),
+});
+
+export type ExamResult = z.infer<typeof examResultSchema>;
+
+// Report Reflection (editable via shared link)
+export const reportReflectionSchema = z.object({
+  parentReflection: z.string().optional(),
+  parentSignedAt: z.string().optional(),
+  studentReflection: z.string().optional(),
+  studentSignedAt: z.string().optional(),
+});
+
+export type ReportReflection = z.infer<typeof reportReflectionSchema>;
+
+// Report Signature
+export const reportSignatureSchema = z.object({
+  classroomTeacher: z.object({
+    name: z.string(),
+    signedAt: z.string(),
+  }).optional(),
+  headOfSchool: z.object({
+    name: z.string(),
+    signedAt: z.string(),
+  }).optional(),
+});
+
+export type ReportSignature = z.infer<typeof reportSignatureSchema>;
+
 // Student Report Schema
 export const studentReportSchema = z.object({
   id: z.string(),
@@ -116,6 +153,9 @@ export const studentReportSchema = z.object({
   entries: z.array(reportEntrySchema),
   subjectComments: z.array(subjectCommentSchema).optional(),
   generalComment: z.string().optional(),
+  examResults: z.array(examResultSchema).optional(),
+  reflections: reportReflectionSchema.optional(),
+  signatures: reportSignatureSchema.optional(),
   status: z.enum(['draft', 'completed', 'reviewed']).default('draft'),
   shareToken: z.string().optional(),
   sharedAt: z.string().optional(),
