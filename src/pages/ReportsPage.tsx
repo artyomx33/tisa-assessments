@@ -315,7 +315,6 @@ export default function ReportsPage() {
     setGeneralCommentAI('');
     setExamResults([]);
   };
-  };
 
   const getGradeInfo = (gradeId: string) => grades.find((g) => g.id === gradeId);
 
@@ -1118,3 +1117,4 @@ export default function ReportsPage() {
     </AppLayout>
   );
 }
+
