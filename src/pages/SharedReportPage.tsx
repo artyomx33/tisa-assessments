@@ -32,7 +32,10 @@ export default function SharedReportPage() {
   const assessment = assessmentTemplates.find((a) => a.id === report.assessmentTemplateId);
   const grade = student ? grades.find((g) => g.id === student.gradeId) : null;
 
-  const renderStars = (count: number, max: number = 3) => {
+  const renderStars = (count: number, max: number = 3, isNA?: boolean) => {
+    if (isNA) {
+      return <span className="text-sm text-muted-foreground font-medium">N/A</span>;
+    }
     return (
       <div className="flex gap-0.5">
         {Array.from({ length: max }).map((_, i) => (
@@ -224,7 +227,7 @@ export default function SharedReportPage() {
                       return (
                         <div key={entry.assessmentPointId} className="grid grid-cols-[1fr_auto] items-center px-4 py-2 bg-card">
                           <span className="text-sm">{point.name}</span>
-                          {renderStars(entry.stars, point.maxStars)}
+                          {renderStars(entry.stars, point.maxStars, entry.isNA)}
                         </div>
                       );
                     })}

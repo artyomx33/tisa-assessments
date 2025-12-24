@@ -86,6 +86,7 @@ export const reportEntrySchema = z.object({
   assessmentPointId: z.string(),
   subjectId: z.string(),
   stars: z.number().min(0).max(5),
+  isNA: z.boolean().optional(),
   teacherNotes: z.string().optional(),
   aiRewrittenText: z.string().optional(),
 });
