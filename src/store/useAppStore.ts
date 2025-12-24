@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { SchoolYear, Grade, AssessmentTemplate, Student, StudentReport, AssessmentPoint, AppSettings, TeacherAssignment, ExamResult, ReportReflection, ReportSignature } from '@/types';
+import type { SchoolYear, Grade, AssessmentTemplate, Student, StudentReport, AssessmentPoint, AppSettings, TeacherAssignment } from '@/types';
 
 interface AppState {
   // School Years
@@ -33,8 +33,6 @@ interface AppState {
   updateReport: (id: string, report: Partial<StudentReport>) => void;
   deleteReport: (id: string) => void;
   updateReportShareToken: (id: string, token: string) => void;
-  updateReportReflection: (shareToken: string, reflections: Partial<ReportReflection>) => void;
-  signReport: (id: string, role: 'classroomTeacher' | 'headOfSchool', name: string) => void;
   getReportByShareToken: (token: string) => StudentReport | undefined;
 
   // App Settings
@@ -607,35 +605,6 @@ export const useAppStore = create<AppState>()(
       getReportByShareToken: (token) => {
         return get().reports.find((r) => r.shareToken === token);
       },
-
-      updateReportReflection: (shareToken, reflections) =>
-        set((state) => ({
-          reports: state.reports.map((r) =>
-            r.shareToken === shareToken
-              ? {
-                  ...r,
-                  reflections: { ...r.reflections, ...reflections },
-                  updatedAt: new Date().toISOString(),
-                }
-              : r
-          ),
-        })),
-
-      signReport: (id, role, name) =>
-        set((state) => ({
-          reports: state.reports.map((r) =>
-            r.id === id
-              ? {
-                  ...r,
-                  signatures: {
-                    ...r.signatures,
-                    [role]: { name, signedAt: new Date().toISOString() },
-                  },
-                  updatedAt: new Date().toISOString(),
-                }
-              : r
-          ),
-        })),
 
       // App Settings
       appSettings: defaultAppSettings,

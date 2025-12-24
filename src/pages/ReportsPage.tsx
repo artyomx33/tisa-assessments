@@ -40,10 +40,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { StarRating } from '@/components/ui/StarRating';
-import { ExamResultsSection } from '@/components/reports/ExamResultsSection';
-import { SignatureSection } from '@/components/reports/SignatureSection';
 import { toast } from 'sonner';
-import type { StudentReport, ReportEntry, SubjectComment, ExamResult } from '@/types';
+import type { StudentReport, ReportEntry, SubjectComment } from '@/types';
 import tisaLogo from '@/assets/tisa_logo.png';
 
 const reportFormSchema = z.object({
@@ -83,18 +81,15 @@ export default function ReportsPage() {
   const [generalComment, setGeneralComment] = useState('');
   const [viewingReport, setViewingReport] = useState<StudentReport | null>(null);
   const [generalCommentAI, setGeneralCommentAI] = useState('');
-  const [examResults, setExamResults] = useState<ExamResult[]>([]);
 
   const {
     reports,
     addReport,
-    updateReport,
     students,
     assessmentTemplates,
     grades,
     activeSchoolYearId,
     appSettings,
-    signReport,
   } = useAppStore();
 
   const activeStudents = students.filter((s) => s.schoolYearId === activeSchoolYearId);
@@ -209,7 +204,6 @@ export default function ReportsPage() {
     setSubjectComments({});
     setGeneralComment('');
     setGeneralCommentAI('');
-    setExamResults([]);
     setExpandedSubjects(new Set());
     form.reset({
       studentId: '',
@@ -299,7 +293,6 @@ export default function ReportsPage() {
       entries: entryArray,
       subjectComments: subjectCommentArray,
       generalComment: generalCommentAI || generalComment,
-      examResults: examResults.length > 0 ? examResults : undefined,
       status: 'draft',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -313,7 +306,6 @@ export default function ReportsPage() {
     setSubjectComments({});
     setGeneralComment('');
     setGeneralCommentAI('');
-    setExamResults([]);
   };
 
   const getGradeInfo = (gradeId: string) => grades.find((g) => g.id === gradeId);
@@ -713,14 +705,6 @@ export default function ReportsPage() {
                           )}
                         </CardContent>
                       </Card>
-
-                      {/* Exam Results Section */}
-                      <ExamResultsSection
-                        examResults={examResults}
-                        onExamResultsChange={setExamResults}
-                        subjects={selectedAssessment?.subjects || []}
-                        availableTerms={['Term 1', 'Term 2', 'Term 3', 'Term 4']}
-                      />
                     </div>
                   )}
 
@@ -1117,4 +1101,3 @@ export default function ReportsPage() {
     </AppLayout>
   );
 }
-
