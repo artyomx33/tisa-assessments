@@ -56,6 +56,7 @@ type ReportFormValues = z.infer<typeof reportFormSchema>;
 interface EntryState {
   [key: string]: {
     stars: number;
+    isNA: boolean;
     teacherNotes: string;
     aiRewrittenText: string;
   };
@@ -154,6 +155,7 @@ export default function ReportsPage() {
           const key = `${subject.id}:${point.id}`;
           newEntries[key] = {
             stars: point.maxStars, // START FULL!
+            isNA: false,
             teacherNotes: '',
             aiRewrittenText: '',
           };
@@ -170,7 +172,7 @@ export default function ReportsPage() {
     }
   };
 
-  const updateEntry = (subjectId: string, pointId: string, field: keyof EntryState[string], value: string | number) => {
+  const updateEntry = (subjectId: string, pointId: string, field: keyof EntryState[string], value: string | number | boolean) => {
     const key = `${subjectId}:${pointId}`;
     setEntries((prev) => ({
       ...prev,
@@ -266,6 +268,7 @@ export default function ReportsPage() {
         assessmentPointId: pointId,
         subjectId,
         stars: value.stars,
+        isNA: value.isNA || undefined,
         teacherNotes: value.teacherNotes,
         aiRewrittenText: value.aiRewrittenText,
       };
@@ -524,6 +527,8 @@ export default function ReportsPage() {
                                             max={point.maxStars}
                                             onChange={(val) => updateEntry(subject.id, point.id, 'stars', val)}
                                             size="md"
+                                            isNA={entry?.isNA || false}
+                                            onNAChange={(val) => updateEntry(subject.id, point.id, 'isNA', val)}
                                           />
                                         </div>
                                       </CardHeader>
@@ -1025,7 +1030,7 @@ export default function ReportsPage() {
                                   className={`flex items-center justify-between px-4 py-2 ${idx % 2 === 0 ? 'bg-card' : 'bg-muted/20'}`}
                                 >
                                   <span className="text-sm text-foreground">{point.name}</span>
-                                  <StarRating value={entry?.stars || 0} max={point.maxStars} readonly size="sm" />
+                                  <StarRating value={entry?.stars || 0} max={point.maxStars} readonly size="sm" isNA={entry?.isNA} />
                                 </div>
                               );
                             })}
