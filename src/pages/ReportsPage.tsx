@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy, Pencil, Filter } from 'lucide-react';
+import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy, Pencil, Filter, User, UserCircle, GraduationCap, Calendar, Users, Briefcase, Target, Heart } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -1126,121 +1126,151 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  <div className="p-6 space-y-6">
-                    {/* Student Information Section */}
-                    <div className="overflow-hidden rounded-lg border border-border">
-                      <div className="bg-tisa-blue text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide">
-                        Student Information
-                      </div>
-                      <div className="flex">
-                        <div className="flex-1 grid grid-cols-2 divide-x divide-border">
-                          <div className="divide-y divide-border">
-                            <div className="flex">
-                              <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Full Name</div>
-                              <div className="px-4 py-2 text-sm font-semibold flex-1">{reportStudent?.firstName} {reportStudent?.lastName}</div>
-                            </div>
-                            <div className="flex">
-                              <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Name Used</div>
-                              <div className="px-4 py-2 text-sm flex-1">{reportStudent?.nameUsed || '-'}</div>
+                  <div className="p-8 space-y-8">
+                    {/* Student & Teacher Info - Side by Side Cards */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Student Information Card */}
+                      <div className="bg-gradient-to-br from-background to-muted/30 rounded-2xl shadow-lg p-6 border border-border/50 transition-all duration-300 hover:shadow-xl">
+                        <div className="flex items-center gap-3 mb-5">
+                          <div className="p-2.5 bg-tisa-blue/10 rounded-xl">
+                            <User className="h-5 w-5 text-tisa-blue" />
+                          </div>
+                          <h3 className="font-semibold text-lg">Student Information</h3>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3">
+                            <UserCircle className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Full Name</p>
+                              <p className="font-semibold">{reportStudent?.firstName} {reportStudent?.lastName}</p>
                             </div>
                           </div>
-                          <div className="divide-y divide-border">
-                            <div className="flex">
-                              <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Grade Level</div>
-                              <div className="px-4 py-2 text-sm flex-1">{reportGrade?.name}</div>
+                          <div className="flex items-center gap-3">
+                            <Sparkles className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Name Used</p>
+                              <p className="font-medium">{reportStudent?.nameUsed || '-'}</p>
                             </div>
-                            <div className="flex">
-                              <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Date of Birth</div>
-                              <div className="px-4 py-2 text-sm flex-1">
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Grade Level</p>
+                              <p className="font-medium">{reportGrade?.name}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Date of Birth</p>
+                              <p className="font-medium">
                                 {reportStudent?.dateOfBirth 
                                   ? new Date(reportStudent.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
                                   : '-'}
-                              </div>
+                              </p>
                             </div>
                           </div>
                         </div>
                       </div>
+
+                      {/* Teacher Information Card */}
+                      {(reportGrade?.classroomTeacher || (reportGrade?.teacherAssignments && reportGrade.teacherAssignments.length > 0)) && (
+                        <div className="bg-gradient-to-br from-background to-muted/30 rounded-2xl shadow-lg p-6 border border-border/50 transition-all duration-300 hover:shadow-xl">
+                          <div className="flex items-center gap-3 mb-5">
+                            <div className="p-2.5 bg-tisa-purple/10 rounded-xl">
+                              <Users className="h-5 w-5 text-tisa-purple" />
+                            </div>
+                            <h3 className="font-semibold text-lg">Teacher Information</h3>
+                          </div>
+                          <div className="space-y-4">
+                            {/* Core Programme */}
+                            {((reportGrade.classroomTeacher) || (reportGrade.teacherAssignments && reportGrade.teacherAssignments.filter(a => a.category === 'core').length > 0)) && (
+                              <div>
+                                <p className="text-xs font-semibold text-tisa-purple uppercase tracking-wide mb-2 flex items-center gap-2">
+                                  <BookOpen className="h-3.5 w-3.5" />
+                                  Core Programme
+                                </p>
+                                <div className="space-y-2 pl-5">
+                                  {reportGrade.classroomTeacher && (
+                                    <div className="flex justify-between items-center py-1.5 border-b border-border/50">
+                                      <span className="text-sm text-muted-foreground">Classroom Teacher</span>
+                                      <span className="text-sm font-medium">{reportGrade.classroomTeacher}</span>
+                                    </div>
+                                  )}
+                                  {reportGrade.teacherAssignments?.filter(a => a.category === 'core').map((a) => (
+                                    <div key={a.id} className="flex justify-between items-center py-1.5 border-b border-border/50 last:border-0">
+                                      <span className="text-sm text-muted-foreground">{a.subject}</span>
+                                      <span className="text-sm font-medium">{a.teacher}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {/* Professional Tracks */}
+                            {reportGrade?.teacherAssignments && reportGrade.teacherAssignments.filter(a => a.category === 'professional').length > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold text-tisa-blue uppercase tracking-wide mb-2 flex items-center gap-2">
+                                  <Briefcase className="h-3.5 w-3.5" />
+                                  Professional Tracks
+                                </p>
+                                <div className="space-y-2 pl-5">
+                                  {reportGrade.teacherAssignments.filter(a => a.category === 'professional').map((a) => (
+                                    <div key={a.id} className="flex justify-between items-center py-1.5 border-b border-border/50 last:border-0">
+                                      <span className="text-sm text-muted-foreground">{a.subject}</span>
+                                      <span className="text-sm font-medium">{a.teacher}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Teacher Information Section */}
-                    {(reportGrade?.classroomTeacher || (reportGrade?.teacherAssignments && reportGrade.teacherAssignments.length > 0)) && (
-                      <div className="overflow-hidden rounded-lg border border-border">
-                        <div className="bg-tisa-blue text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide">
-                          Teacher Information
-                        </div>
-                        <div className="divide-y divide-border">
-                          {/* Core Programme */}
-                          {reportGrade.teacherAssignments && reportGrade.teacherAssignments.filter(a => a.category === 'core').length > 0 && (
-                            <div className="grid grid-cols-[140px_1fr_1fr] text-sm">
-                              <div className="bg-tisa-purple-light px-4 py-2 font-semibold text-tisa-purple row-span-99 flex items-center border-r border-border">
-                                CORE PROGRAMME
-                              </div>
-                              <div className="col-span-2 divide-y divide-border">
-                                {reportGrade.classroomTeacher && (
-                                  <div className="grid grid-cols-2 divide-x divide-border">
-                                    <div className="bg-muted/30 px-4 py-1.5 font-medium">Classroom Teacher</div>
-                                    <div className="px-4 py-1.5">{reportGrade.classroomTeacher}</div>
-                                  </div>
-                                )}
-                                {reportGrade.teacherAssignments.filter(a => a.category === 'core').map((a) => (
-                                  <div key={a.id} className="grid grid-cols-2 divide-x divide-border">
-                                    <div className="bg-muted/30 px-4 py-1.5 font-medium">{a.subject}</div>
-                                    <div className="px-4 py-1.5">{a.teacher}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {/* Professional Tracks */}
-                          {reportGrade?.teacherAssignments && reportGrade.teacherAssignments.filter(a => a.category === 'professional').length > 0 && (
-                            <div className="grid grid-cols-[140px_1fr_1fr] text-sm">
-                              <div className="bg-tisa-purple-light px-4 py-2 font-semibold text-tisa-purple row-span-99 flex items-center border-r border-border">
-                                PROFESSIONAL TRACKS
-                              </div>
-                              <div className="col-span-2 divide-y divide-border">
-                                {reportGrade.teacherAssignments.filter(a => a.category === 'professional').map((a) => (
-                                  <div key={a.id} className="grid grid-cols-2 divide-x divide-border">
-                                    <div className="bg-muted/30 px-4 py-1.5 font-medium">{a.subject}</div>
-                                    <div className="px-4 py-1.5">{a.teacher}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* School Mission, Vision & Values */}
+                    {/* School Mission, Vision & Values - Quote Style Card */}
                     {(appSettings.missionStatement || appSettings.vision || appSettings.values.length > 0) && (
-                      <div className="overflow-hidden rounded-lg border border-tisa-purple/30 bg-tisa-purple-light">
-                        <div className="p-4 space-y-4">
+                      <div className="relative bg-gradient-to-br from-tisa-purple/5 via-background to-tisa-blue/5 rounded-2xl shadow-lg p-8 border border-tisa-purple/20 overflow-hidden">
+                        {/* Decorative quote marks */}
+                        <div className="absolute top-4 left-6 text-6xl text-tisa-purple/10 font-serif leading-none">"</div>
+                        <div className="absolute bottom-4 right-6 text-6xl text-tisa-purple/10 font-serif leading-none rotate-180">"</div>
+                        
+                        <div className="relative space-y-6">
                           {appSettings.missionStatement && (
-                            <div>
-                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide mb-1">Our Mission</h4>
-                              <p className="text-sm text-foreground/80 italic">{appSettings.missionStatement}</p>
+                            <div className="text-center max-w-2xl mx-auto">
+                              <h4 className="font-semibold text-tisa-purple text-xs uppercase tracking-widest mb-2 flex items-center justify-center gap-2">
+                                <Target className="h-3.5 w-3.5" />
+                                Our Mission
+                              </h4>
+                              <p className="text-base text-foreground/80 italic leading-relaxed">{appSettings.missionStatement}</p>
                             </div>
                           )}
                           {appSettings.statement && (
-                            <div>
-                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide mb-1">Statement</h4>
+                            <div className="text-center max-w-2xl mx-auto">
+                              <h4 className="font-semibold text-tisa-purple text-xs uppercase tracking-widest mb-2">Statement</h4>
                               <p className="text-sm text-foreground/80 whitespace-pre-line">{appSettings.statement}</p>
                             </div>
                           )}
                           {appSettings.vision && (
-                            <div>
-                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide mb-1">Our Vision</h4>
-                              <p className="text-sm text-foreground/80 whitespace-pre-line">{appSettings.vision}</p>
+                            <div className="text-center max-w-2xl mx-auto">
+                              <h4 className="font-semibold text-tisa-blue text-xs uppercase tracking-widest mb-2 flex items-center justify-center gap-2">
+                                <Eye className="h-3.5 w-3.5" />
+                                Our Vision
+                              </h4>
+                              <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{appSettings.vision}</p>
                             </div>
                           )}
                           {appSettings.values.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide mb-2">Our Values</h4>
-                              <div className="flex flex-wrap gap-2">
+                            <div className="text-center">
+                              <h4 className="font-semibold text-tisa-purple text-xs uppercase tracking-widest mb-3 flex items-center justify-center gap-2">
+                                <Heart className="h-3.5 w-3.5" />
+                                Our Values
+                              </h4>
+                              <div className="flex flex-wrap justify-center gap-2">
                                 {appSettings.values.map((value, i) => (
                                   <span 
                                     key={i} 
-                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-tisa-purple text-white"
+                                    className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-tisa-purple to-tisa-blue text-white shadow-md"
                                   >
                                     {value}
                                   </span>
@@ -1252,26 +1282,28 @@ export default function ReportsPage() {
                       </div>
                     )}
 
-                    {/* Grading Key */}
+                    {/* Grading Key - Compact Elegant Card */}
                     {appSettings.gradingKey && (
-                      <div className="overflow-hidden rounded-lg border border-star-filled/30 bg-star-filled/5">
-                        <div className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Star className="h-4 w-4 text-star-filled fill-star-filled" />
-                            <h4 className="font-semibold text-sm">Learner Profile - Grading Key</h4>
+                      <div className="bg-gradient-to-r from-star-filled/5 via-background to-star-filled/10 rounded-2xl shadow-lg p-5 border border-star-filled/20">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-star-filled/10 rounded-xl">
+                              <Star className="h-5 w-5 text-star-filled fill-star-filled" />
+                            </div>
+                            <h4 className="font-semibold">Learner Profile - Grading Key</h4>
                           </div>
-                          <div className="flex flex-wrap gap-4 text-sm">
-                            <div className="flex items-center gap-1">
+                          <div className="flex flex-wrap gap-6 text-sm">
+                            <div className="flex items-center gap-2 bg-background/80 px-3 py-1.5 rounded-full shadow-sm">
                               <span className="text-star-filled">⭐⭐⭐</span>
-                              <span className="text-muted-foreground">- Mostly</span>
+                              <span className="text-muted-foreground font-medium">Mostly</span>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2 bg-background/80 px-3 py-1.5 rounded-full shadow-sm">
                               <span className="text-star-filled">⭐⭐</span>
-                              <span className="text-muted-foreground">- Usually</span>
+                              <span className="text-muted-foreground font-medium">Usually</span>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2 bg-background/80 px-3 py-1.5 rounded-full shadow-sm">
                               <span className="text-star-filled">⭐</span>
-                              <span className="text-muted-foreground">- Rarely</span>
+                              <span className="text-muted-foreground font-medium">Rarely</span>
                             </div>
                           </div>
                         </div>
