@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy, Pencil, Filter, User, UserCircle, GraduationCap, Calendar, Users, Briefcase, Target, Heart, Loader2 } from 'lucide-react';
+import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy, Pencil, Filter, User, UserCircle, GraduationCap, Calendar, Users, Briefcase, Target, Heart, Loader2, Image } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -46,8 +46,9 @@ import { SignatureSection } from '@/components/reports/SignatureSection';
 import { ExamResultsDisplay } from '@/components/reports/ExamResultsDisplay';
 import { SignatureDisplay } from '@/components/reports/SignatureDisplay';
 import { AIRewriteButtons } from '@/components/reports/AIRewriteButtons';
+import { WorkSamplesSection } from '@/components/reports/WorkSamplesSection';
 import { toast } from 'sonner';
-import type { StudentReport, ReportEntry, SubjectComment, ExamResult, ReportSignature } from '@/types';
+import type { StudentReport, ReportEntry, SubjectComment, ExamResult, ReportSignature, StudentDocument } from '@/types';
 import tisaLogo from '@/assets/tisa_logo.png';
 
 const reportFormSchema = z.object({
@@ -107,6 +108,10 @@ export default function ReportsPage() {
     grades,
     activeSchoolYearId,
     appSettings,
+    documents,
+    addDocument,
+    updateDocument,
+    deleteDocument,
   } = useAppStore();
 
   const activeStudents = students.filter((s) => s.schoolYearId === activeSchoolYearId);
@@ -220,6 +225,7 @@ export default function ReportsPage() {
   };
 
   const openCreateDialog = () => {
+    const newDraftReportId = crypto.randomUUID(); // Generate ID for work samples
     setSelectedStudentId('');
     setSelectedAssessmentId('');
     setEntries({});
@@ -229,7 +235,7 @@ export default function ReportsPage() {
     setExamResults([]);
     setSignatures({});
     setExpandedSubjects(new Set());
-    setEditingReportId(null);
+    setEditingReportId(newDraftReportId); // Use draft ID for new reports too
     form.reset({
       studentId: '',
       assessmentTemplateId: '',
@@ -498,8 +504,12 @@ That's the bar.`;
         };
       });
 
+    // Use editingReportId for both new and existing reports
+    const reportId = editingReportId || crypto.randomUUID();
+    const existingReport = reports.find(r => r.id === reportId);
+
     const newReport: StudentReport = {
-      id: crypto.randomUUID(),
+      id: reportId,
       studentId: data.studentId,
       assessmentTemplateId: data.assessmentTemplateId,
       schoolYearId: activeSchoolYearId!,
@@ -510,15 +520,14 @@ That's the bar.`;
       examResults: [...examResults, ...generatedExamResults],
       signatures: signatures,
       status: 'draft',
-      createdAt: new Date().toISOString(),
+      createdAt: existingReport?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    if (editingReportId) {
+    if (existingReport) {
       // Update existing report
-      updateReport(editingReportId, {
+      updateReport(reportId, {
         ...newReport,
-        id: editingReportId,
         updatedAt: new Date().toISOString(),
       });
       toast.success('Report updated successfully');
@@ -942,6 +951,31 @@ That's the bar.`;
                         classroomTeacherName={selectedStudent ? grades.find(g => g.id === selectedStudent.gradeId)?.classroomTeacher : ''}
                         onSign={(role, name) => setSignatures({ ...signatures, [role]: { name, signedAt: new Date().toISOString() } })}
                       />
+
+                      {/* Work Samples Section */}
+                      {editingReportId && (
+                        <Card className="mt-6">
+                          <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <Image className="h-5 w-5" />
+                              Work Samples
+                            </CardTitle>
+                            <CardDescription>
+                              Upload photos of student work (max 200KB per file)
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <WorkSamplesSection
+                              reportId={editingReportId}
+                              studentId={selectedStudentId}
+                              documents={documents}
+                              onAddDocument={addDocument}
+                              onUpdateDocument={updateDocument}
+                              onDeleteDocument={deleteDocument}
+                            />
+                          </CardContent>
+                        </Card>
+                      )}
 
                       {/* General Comment */}
                       <Card className="mt-6">

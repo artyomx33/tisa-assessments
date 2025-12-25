@@ -182,3 +182,23 @@ export const appSettingsSchema = z.object({
 });
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;
+
+// Student Document Schema (for work samples in reports and general school documents)
+export const studentDocumentSchema = z.object({
+  id: z.string(),
+  studentId: z.string(),
+  type: z.enum(['report', 'general']),  // 'report' = tied to specific report, 'general' = school forms
+  
+  // For report documents only:
+  reportId: z.string().optional(),      // Links to specific report
+  
+  // Common fields:
+  label: z.string(),                    // "Math worksheet", "Art project", etc.
+  comment: z.string().optional(),       // Teacher notes about the document
+  fileName: z.string(),                 // Original filename
+  fileType: z.string(),                 // MIME type (image/jpeg, application/pdf, etc.)
+  fileData: z.string(),                 // Base64 encoded file (max 200KB)
+  uploadedAt: z.string(),               // ISO date
+});
+
+export type StudentDocument = z.infer<typeof studentDocumentSchema>;

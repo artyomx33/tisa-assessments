@@ -6,11 +6,12 @@ import { Star, FileText } from 'lucide-react';
 import { ExamResultsDisplay } from '@/components/reports/ExamResultsDisplay';
 import { SignatureDisplay } from '@/components/reports/SignatureDisplay';
 import { ReflectionsSection } from '@/components/reports/ReflectionsSection';
+import { WorkSamplesDisplay } from '@/components/reports/WorkSamplesDisplay';
 import tisaLogo from '@/assets/tisa_logo.png';
 
 export default function SharedReportPage() {
   const { shareToken } = useParams<{ shareToken: string }>();
-  const { reports, students, assessmentTemplates, grades, appSettings, updateReportReflection } = useAppStore();
+  const { reports, students, assessmentTemplates, grades, appSettings, updateReportReflection, documents } = useAppStore();
 
   // Find the report by share token
   const report = reports.find((r) => r.shareToken === shareToken);
@@ -284,6 +285,11 @@ export default function SharedReportPage() {
                 </div>
               </div>
             )}
+
+            {/* Work Samples */}
+            <WorkSamplesDisplay 
+              documents={documents.filter(d => d.type === 'report' && d.reportId === report.id)} 
+            />
 
             {/* Reflections (Editable by parents/students) */}
             <ReflectionsSection
