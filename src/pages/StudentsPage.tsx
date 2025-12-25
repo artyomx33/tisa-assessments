@@ -210,91 +210,96 @@ export default function StudentsPage() {
                       )}
                     />
                   </div>
-                  <FormField
-                    control={form.control}
-                    name="nameUsed"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name Used (Nickname)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Adriana (optional)" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="dateOfBirth"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Date of Birth</FormLabel>
-                        <FormControl>
-                          <DatePicker
-                            value={field.value}
-                            onChange={field.onChange}
-                            placeholder="Select date of birth"
-                            maxDate={new Date()}
-                            minDate={new Date("2005-01-01")}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="gradeId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Grade</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                  {/* Nickname + Gender Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="nameUsed"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nickname</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a grade" />
-                            </SelectTrigger>
+                            <Input placeholder="e.g., Adriana" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            {grades.map((grade) => (
-                              <SelectItem key={grade.id} value={grade.id}>
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className="h-3 w-3 rounded"
-                                    style={{ backgroundColor: `hsl(var(--grade-${grade.colorIndex}))` }}
-                                  />
-                                  {grade.name}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="gender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Gender</FormLabel>
+                          <Select value={field.value || ''} onValueChange={(val) => field.onChange(val || undefined)}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="male">Male</SelectItem>
+                              <SelectItem value="female">Female</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                  {/* Gender Field (only in edit mode) */}
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Gender</FormLabel>
-                        <Select value={field.value || ''} onValueChange={(val) => field.onChange(val || undefined)}>
+                  {/* DOB + Grade Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="dateOfBirth"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Date of Birth</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select gender (optional)" />
-                            </SelectTrigger>
+                            <DatePicker
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Select date"
+                              maxDate={new Date()}
+                              minDate={new Date("2005-01-01")}
+                            />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="female">Female</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="gradeId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Grade</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select grade" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {grades.map((grade) => (
+                                <SelectItem key={grade.id} value={grade.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="h-3 w-3 rounded"
+                                      style={{ backgroundColor: `hsl(var(--grade-${grade.colorIndex}))` }}
+                                    />
+                                    {grade.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   
                   {/* Photo Upload */}
                   <FormField
