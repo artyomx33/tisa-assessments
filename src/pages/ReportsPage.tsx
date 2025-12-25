@@ -94,6 +94,7 @@ export default function ReportsPage() {
   const [signatures, setSignatures] = useState<ReportSignature>({});
   const [starFilters, setStarFilters] = useState({ oneStar: false, twoStars: false, threeStars: false, comments: false });
   const [copiedLink, setCopiedLink] = useState(false);
+  const [valuesViewMode, setValuesViewMode] = useState<'pills' | 'list'>('pills');
 
   const {
     reports,
@@ -1129,41 +1130,43 @@ export default function ReportsPage() {
                   <div className="p-8 space-y-8">
                     {/* Student & Teacher Info - Side by Side Cards */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Student Information Card - Horizontal */}
-                      <div className="bg-gradient-to-br from-background to-muted/30 rounded-2xl shadow-lg p-5 border border-border/50 transition-all duration-300 hover:shadow-xl">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-2 bg-tisa-blue/10 rounded-xl">
-                            <User className="h-4 w-4 text-tisa-blue" />
-                          </div>
-                          <h3 className="font-semibold">Student Information</h3>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="flex items-center gap-2">
-                            <UserCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      {/* Student Information Card - Full Width, No Header */}
+                      <div className="lg:col-span-2 bg-gradient-to-br from-background to-muted/30 rounded-2xl shadow-lg p-5 border border-border/50 transition-all duration-300 hover:shadow-xl">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-tisa-blue/10 rounded-xl">
+                              <UserCircle className="h-5 w-5 text-tisa-blue" />
+                            </div>
                             <div className="min-w-0">
                               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Full Name</p>
-                              <p className="font-semibold text-sm truncate">{reportStudent?.firstName} {reportStudent?.lastName}</p>
+                              <p className="font-semibold text-sm">{reportStudent?.firstName} {reportStudent?.lastName}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-tisa-purple/10 rounded-xl">
+                              <Sparkles className="h-5 w-5 text-tisa-purple" />
+                            </div>
                             <div className="min-w-0">
                               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Name Used</p>
-                              <p className="font-medium text-sm truncate">{reportStudent?.nameUsed || '-'}</p>
+                              <p className="font-medium text-sm">{reportStudent?.nameUsed || '-'}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <GraduationCap className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-tisa-blue/10 rounded-xl">
+                              <GraduationCap className="h-5 w-5 text-tisa-blue" />
+                            </div>
                             <div className="min-w-0">
                               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Grade Level</p>
-                              <p className="font-medium text-sm truncate">{reportGrade?.name}</p>
+                              <p className="font-medium text-sm">{reportGrade?.name}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-tisa-purple/10 rounded-xl">
+                              <Calendar className="h-5 w-5 text-tisa-purple" />
+                            </div>
                             <div className="min-w-0">
                               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Date of Birth</p>
-                              <p className="font-medium text-sm truncate">
+                              <p className="font-medium text-sm">
                                 {reportStudent?.dateOfBirth 
                                   ? new Date(reportStudent.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
                                   : '-'}
@@ -1250,7 +1253,14 @@ export default function ReportsPage() {
                               </div>
                               <h4 className="font-semibold text-tisa-blue text-sm uppercase tracking-wide">Our Vision</h4>
                             </div>
-                            <p className="text-sm text-foreground/80 leading-relaxed">{appSettings.vision}</p>
+                            <ul className="text-sm text-foreground/80 leading-relaxed space-y-1.5">
+                              {appSettings.vision.split(/[•;]/).filter(v => v.trim()).map((point, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <span className="text-tisa-blue mt-0.5">•</span>
+                                  <span>{point.trim()}</span>
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         )}
                         {appSettings.statement && (
@@ -1266,22 +1276,46 @@ export default function ReportsPage() {
                         )}
                         {appSettings.values.length > 0 && (
                           <div className="bg-gradient-to-br from-tisa-purple/5 via-background to-tisa-blue/5 rounded-2xl shadow-lg p-5 border border-tisa-purple/20 transition-all duration-300 hover:shadow-xl">
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="p-2 bg-gradient-to-r from-tisa-purple/10 to-tisa-blue/10 rounded-lg">
-                                <Heart className="h-4 w-4 text-tisa-purple" />
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className="p-2 bg-gradient-to-r from-tisa-purple/10 to-tisa-blue/10 rounded-lg">
+                                  <Heart className="h-4 w-4 text-tisa-purple" />
+                                </div>
+                                <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide">Our Values</h4>
                               </div>
-                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide">Our Values</h4>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setValuesViewMode(prev => prev === 'pills' ? 'list' : 'pills')}
+                                className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                              >
+                                {valuesViewMode === 'pills' ? 'Try List View' : 'Try Pills View'}
+                              </Button>
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                              {appSettings.values.map((value, i) => (
-                                <span 
-                                  key={i} 
-                                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-tisa-purple to-tisa-blue text-white shadow-sm"
-                                >
-                                  {value}
-                                </span>
-                              ))}
-                            </div>
+                            {valuesViewMode === 'pills' ? (
+                              <div className="flex flex-wrap justify-center gap-4">
+                                {appSettings.values.map((value, i) => (
+                                  <span 
+                                    key={i} 
+                                    className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-tisa-purple to-tisa-blue text-white shadow-sm transition-transform duration-200 hover:scale-105"
+                                  >
+                                    {value}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {appSettings.values.map((value, i) => (
+                                  <div 
+                                    key={i} 
+                                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-tisa-purple/5 transition-colors"
+                                  >
+                                    <Sparkles className="h-4 w-4 text-tisa-purple flex-shrink-0" />
+                                    <span className="text-sm font-medium text-foreground/90">{value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
