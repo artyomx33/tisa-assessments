@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Pencil, Trash2, Users, Search, Camera } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Search, Camera, FolderOpen } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { GeneralDocumentsSection } from '@/components/students/GeneralDocumentsSection';
 import { toast } from 'sonner';
 
 const studentFormSchema = z.object({
@@ -44,6 +45,7 @@ const studentFormSchema = z.object({
   dateOfBirth: z.date().optional(),
   gradeId: z.string().min(1, 'Please select a grade'),
   avatarUrl: z.string().optional(),
+  gender: z.enum(['male', 'female']).optional(),
 });
 
 type StudentFormValues = z.infer<typeof studentFormSchema>;
@@ -53,8 +55,9 @@ export default function StudentsPage() {
   const [editingStudent, setEditingStudent] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGrade, setFilterGrade] = useState<string>('all');
+  const [documentsStudentId, setDocumentsStudentId] = useState<string | null>(null);
 
-  const { students, addStudent, updateStudent, deleteStudent, grades, activeSchoolYearId } = useAppStore();
+  const { students, addStudent, updateStudent, deleteStudent, grades, activeSchoolYearId, documents, addDocument, deleteDocument } = useAppStore();
 
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
@@ -65,6 +68,7 @@ export default function StudentsPage() {
       dateOfBirth: undefined,
       gradeId: '',
       avatarUrl: '',
+      gender: undefined,
     },
   });
 
@@ -91,7 +95,7 @@ export default function StudentsPage() {
   });
 
   const openCreateDialog = () => {
-    form.reset({ firstName: '', lastName: '', nameUsed: '', dateOfBirth: undefined, gradeId: '', avatarUrl: '' });
+    form.reset({ firstName: '', lastName: '', nameUsed: '', dateOfBirth: undefined, gradeId: '', avatarUrl: '', gender: undefined });
     setEditingStudent(null);
     setIsDialogOpen(true);
   };
@@ -104,6 +108,7 @@ export default function StudentsPage() {
       dateOfBirth: student.dateOfBirth ? new Date(student.dateOfBirth) : undefined,
       gradeId: student.gradeId,
       avatarUrl: student.avatarUrl || '',
+      gender: student.gender,
     });
     setEditingStudent(student.id);
     setIsDialogOpen(true);
@@ -117,6 +122,7 @@ export default function StudentsPage() {
       dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : undefined,
       gradeId: data.gradeId,
       avatarUrl: data.avatarUrl || undefined,
+      gender: data.gender,
     };
 
     if (editingStudent) {
@@ -260,6 +266,29 @@ export default function StudentsPage() {
                                 </div>
                               </SelectItem>
                             ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Gender Field (only in edit mode) */}
+                  <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Gender</FormLabel>
+                        <Select value={field.value || ''} onValueChange={(val) => field.onChange(val || undefined)}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select gender (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -428,6 +457,15 @@ export default function StudentsPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
+                                  onClick={() => setDocumentsStudentId(student.id)}
+                                  title="Documents"
+                                >
+                                  <FolderOpen className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
                                   onClick={() => openEditDialog(student)}
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
@@ -476,6 +514,22 @@ export default function StudentsPage() {
             </motion.div>
           )}
         </div>
+
+        {/* General Documents Dialog */}
+        {documentsStudentId && (
+          <GeneralDocumentsSection
+            studentId={documentsStudentId}
+            studentName={(() => {
+              const s = students.find(st => st.id === documentsStudentId);
+              return s ? `${s.firstName} ${s.lastName}` : '';
+            })()}
+            documents={documents}
+            onAddDocument={(doc) => addDocument({ id: crypto.randomUUID(), ...doc })}
+            onDeleteDocument={deleteDocument}
+            isOpen={!!documentsStudentId}
+            onOpenChange={(open) => !open && setDocumentsStudentId(null)}
+          />
+        )}
       </div>
     </AppLayout>
   );
