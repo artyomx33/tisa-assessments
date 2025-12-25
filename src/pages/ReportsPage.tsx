@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -359,6 +359,32 @@ export default function ReportsPage() {
     : [];
 
   const hasEntries = Object.keys(entries).length > 0;
+
+  // Compute exam results in real-time from subject comments
+  const computedExamResults = useMemo(() => {
+    // Generate exam results from current subjectComments
+    const generated: ExamResult[] = Object.entries(subjectComments)
+      .filter(([_, value]) => value.examGrade)
+      .map(([subjectId, value]) => {
+        const subject = selectedAssessment?.subjects?.find(s => s.id === subjectId);
+        const subjectName = subject?.name || '';
+        const termMatch = subjectName.match(/Term\s*\d/i);
+        const term = termMatch ? termMatch[0] : 'Term 1';
+        const cleanSubjectName = subjectName.replace(/\s*-\s*Term\s*\d/i, '').trim();
+        
+        return {
+          id: `gen-${subjectId}`,
+          term,
+          date: value.examDate,
+          title: 'Assessment of term skills',
+          subject: cleanSubjectName,
+          grade: value.examGrade,
+        };
+      });
+    
+    // Combine with manually added results
+    return [...examResults, ...generated];
+  }, [subjectComments, selectedAssessment, examResults]);
 
   // Get intro text from template
   const introText = selectedAssessment ? (selectedAssessment as any).introText : '';
@@ -735,9 +761,29 @@ export default function ReportsPage() {
 
                       {/* Exam Results Summary Section */}
                       <ExamResultsSection
-                        examResults={examResults}
-                        onUpdate={(id, updates) => setExamResults(examResults.map(e => e.id === id ? { ...e, ...updates } : e))}
-                        onDelete={(id) => setExamResults(examResults.filter(e => e.id !== id))}
+                        examResults={computedExamResults}
+                        onUpdate={(id, updates) => {
+                          if (id.startsWith('gen-')) {
+                            // Update in subjectComments for generated results
+                            const subjectId = id.replace('gen-', '');
+                            if (updates.grade !== undefined) {
+                              updateSubjectComment(subjectId, 'examGrade', updates.grade);
+                            }
+                          } else {
+                            // Update manually added results
+                            setExamResults(examResults.map(e => e.id === id ? { ...e, ...updates } : e));
+                          }
+                        }}
+                        onDelete={(id) => {
+                          if (id.startsWith('gen-')) {
+                            // Clear grade in subjectComments for generated results
+                            const subjectId = id.replace('gen-', '');
+                            updateSubjectComment(subjectId, 'examGrade', '');
+                          } else {
+                            // Delete manually added results
+                            setExamResults(examResults.filter(e => e.id !== id));
+                          }
+                        }}
                       />
 
                       {/* Signature Section */}
