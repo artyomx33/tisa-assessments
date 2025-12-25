@@ -57,7 +57,7 @@ export default function StudentsPage() {
   const [filterGrade, setFilterGrade] = useState<string>('all');
   const [documentsStudentId, setDocumentsStudentId] = useState<string | null>(null);
 
-  const { students, addStudent, updateStudent, deleteStudent, grades, activeSchoolYearId, documents, addDocument, deleteDocument } = useAppStore();
+  const { students, addStudent, updateStudent, deleteStudent, grades, activeSchoolYearId, documents, addDocument, deleteDocument, reports } = useAppStore();
 
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
@@ -529,6 +529,7 @@ export default function StudentsPage() {
               return s ? `${s.firstName} ${s.lastName}` : '';
             })()}
             documents={documents}
+            reports={reports.filter(r => r.studentId === documentsStudentId)}
             onAddDocument={(doc) => addDocument({ id: crypto.randomUUID(), ...doc })}
             onDeleteDocument={deleteDocument}
             isOpen={!!documentsStudentId}
