@@ -884,118 +884,160 @@ That's the bar.`;
                           )}
                         </Button>
                       </div>
-                      {selectedAssessment.subjects?.map((subject) => (
-                        <Collapsible
-                          key={subject.id}
-                          open={expandedSubjects.has(subject.id)}
-                          onOpenChange={() => toggleSubject(subject.id)}
-                        >
-                          <CollapsibleTrigger asChild>
-                            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-                              <CardHeader className="p-4">
-                                <div className="flex items-center justify-between">
+                      {selectedAssessment.subjects?.map((subject) => {
+                        const subjectPoints = subject.assessmentPoints || [];
+                        const completedNotes = subjectPoints.filter(p => {
+                          const key = `${subject.id}:${p.id}`;
+                          return entries[key]?.teacherNotes?.trim();
+                        }).length;
+                        
+                        return (
+                          <Collapsible
+                            key={subject.id}
+                            open={expandedSubjects.has(subject.id)}
+                            onOpenChange={() => toggleSubject(subject.id)}
+                          >
+                            {/* TISA Blue Header Banner */}
+                            <CollapsibleTrigger asChild>
+                              <div className="cursor-pointer rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                <div className="bg-tisa-blue px-4 py-3 flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <BookOpen className="h-5 w-5 text-primary" />
+                                    <BookOpen className="h-5 w-5 text-white/90" />
                                     <div>
-                                      <CardTitle className="text-base">{subject.name}</CardTitle>
+                                      <h4 className="font-display font-semibold text-white uppercase tracking-wide text-sm">
+                                        {subject.name}
+                                      </h4>
                                       {subject.description && (
-                                        <CardDescription>{subject.description}</CardDescription>
+                                        <p className="text-white/70 text-xs mt-0.5">{subject.description}</p>
                                       )}
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline">
-                                      {subject.assessmentPoints?.length || 0} points
-                                    </Badge>
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2">
+                                      <Badge className="bg-white/20 text-white border-0 text-xs">
+                                        {subjectPoints.length} points
+                                      </Badge>
+                                      {completedNotes > 0 && (
+                                        <Badge className="bg-white/30 text-white border-0 text-xs">
+                                          {completedNotes} notes
+                                        </Badge>
+                                      )}
+                                    </div>
                                     {expandedSubjects.has(subject.id) ? (
-                                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                      <ChevronDown className="h-5 w-5 text-white/80" />
                                     ) : (
-                                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                      <ChevronRight className="h-5 w-5 text-white/80" />
                                     )}
                                   </div>
                                 </div>
-                              </CardHeader>
-                            </Card>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <div className="ml-4 mt-2 space-y-3 border-l-2 border-primary/20 pl-4">
-                              {/* Assessment Points */}
-                              {subject.assessmentPoints?.map((point) => {
-                                const key = `${subject.id}:${point.id}`;
-                                const entry = entries[key];
-                                
-                                return (
-                                  <motion.div
-                                    key={point.id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                  >
-                                    <Card>
-                                      <CardHeader className="pb-3">
-                                        <div className="flex items-center justify-between">
-                                          <CardTitle className="text-sm font-medium">
-                                            {point.name}
-                                          </CardTitle>
-                                          <StarRating
-                                            value={entry?.stars || point.maxStars}
-                                            max={point.maxStars}
-                                            onChange={(val) => updateEntry(subject.id, point.id, 'stars', val)}
-                                            size="md"
-                                            isNA={entry?.isNA || false}
-                                            onNAChange={(val) => updateEntry(subject.id, point.id, 'isNA', val)}
-                                          />
-                                        </div>
-                                      </CardHeader>
-                                      <CardContent className="space-y-3">
-                                        <div>
-                                          <label className="mb-1.5 block text-sm text-muted-foreground">
-                                            Teacher Notes (optional)
-                                          </label>
-                                          <Textarea
-                                            placeholder="Enter your observations..."
-                                            className="min-h-[60px]"
-                                            value={entry?.teacherNotes || ''}
-                                            onChange={(e) => updateEntry(subject.id, point.id, 'teacherNotes', e.target.value)}
-                                          />
-                                        </div>
+                              </div>
+                            </CollapsibleTrigger>
 
-                                        <AIRewriteButtons
-                                          sourceText={entry?.teacherNotes || ''}
-                                          aiRewrittenText={entry?.aiRewrittenText || ''}
-                                          loadingKey={key}
-                                          studentName={selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'}
-                                          onRewrite={callAIRewrite}
-                                          onRewriteComplete={(result) => updateEntry(subject.id, point.id, 'aiRewrittenText', result)}
-                                          onAccept={() => acceptAIRewrite(key, entry?.aiRewrittenText || '')}
-                                          isLoading={isAILoading}
-                                          onAITextChange={(text) => updateEntry(subject.id, point.id, 'aiRewrittenText', text)}
-                                        />
-                                      </CardContent>
-                                    </Card>
-                                  </motion.div>
-                                );
-                              })}
+                            <CollapsibleContent>
+                              <div className="border border-t-0 border-border rounded-b-lg bg-card overflow-hidden">
+                                {/* Compact Assessment Points Table */}
+                                <div className="divide-y divide-border">
+                                  {subjectPoints.map((point, idx) => {
+                                    const key = `${subject.id}:${point.id}`;
+                                    const entry = entries[key];
+                                    const hasNotes = entry?.teacherNotes?.trim();
+                                    
+                                    return (
+                                      <motion.div
+                                        key={point.id}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ delay: idx * 0.02 }}
+                                        className="group"
+                                      >
+                                        {/* Main Row - Point Name + Stars */}
+                                        <div className={`px-4 py-3 flex items-center justify-between gap-4 ${hasNotes ? 'bg-primary/5' : 'hover:bg-muted/50'} transition-colors`}>
+                                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${hasNotes ? 'bg-primary' : 'bg-muted-foreground/30'}`} />
+                                            <span className="text-sm font-medium truncate">{point.name}</span>
+                                          </div>
+                                          <div className="shrink-0">
+                                            <StarRating
+                                              value={entry?.stars || point.maxStars}
+                                              max={point.maxStars}
+                                              onChange={(val) => updateEntry(subject.id, point.id, 'stars', val)}
+                                              size="sm"
+                                              isNA={entry?.isNA || false}
+                                              onNAChange={(val) => updateEntry(subject.id, point.id, 'isNA', val)}
+                                            />
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Notes Row - Compact inline */}
+                                        <div className="px-4 pb-3 pt-1 bg-muted/20">
+                                          <div className="flex items-start gap-2">
+                                            <Textarea
+                                              placeholder="Add notes..."
+                                              className="min-h-[36px] text-sm py-2 resize-none bg-background/80 border-muted"
+                                              value={entry?.teacherNotes || ''}
+                                              onChange={(e) => updateEntry(subject.id, point.id, 'teacherNotes', e.target.value)}
+                                              rows={1}
+                                            />
+                                            <div className="shrink-0 flex items-center gap-1">
+                                              <AIRewriteButtons
+                                                sourceText={entry?.teacherNotes || ''}
+                                                aiRewrittenText={entry?.aiRewrittenText || ''}
+                                                loadingKey={key}
+                                                studentName={selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'}
+                                                onRewrite={callAIRewrite}
+                                                onRewriteComplete={(result) => updateEntry(subject.id, point.id, 'aiRewrittenText', result)}
+                                                onAccept={() => acceptAIRewrite(key, entry?.aiRewrittenText || '')}
+                                                isLoading={isAILoading}
+                                                onAITextChange={(text) => updateEntry(subject.id, point.id, 'aiRewrittenText', text)}
+                                                compact
+                                              />
+                                            </div>
+                                          </div>
+                                          
+                                          {/* AI Rewrite Preview - Only show when there's AI text */}
+                                          {entry?.aiRewrittenText && (
+                                            <motion.div
+                                              initial={{ opacity: 0, height: 0 }}
+                                              animate={{ opacity: 1, height: 'auto' }}
+                                              className="mt-2 p-2 bg-tisa-purple/5 border border-tisa-purple/20 rounded text-sm"
+                                            >
+                                              <div className="flex items-start justify-between gap-2">
+                                                <p className="text-muted-foreground flex-1">{entry.aiRewrittenText}</p>
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  className="shrink-0 h-7 text-xs text-tisa-purple hover:bg-tisa-purple/10"
+                                                  onClick={() => acceptAIRewrite(key, entry.aiRewrittenText)}
+                                                >
+                                                  <Check className="h-3 w-3 mr-1" />
+                                                  Accept
+                                                </Button>
+                                              </div>
+                                            </motion.div>
+                                          )}
+                                        </div>
+                                      </motion.div>
+                                    );
+                                  })}
+                                </div>
 
-                              {/* Subject Comment Section */}
-                              <Card className="border-dashed bg-muted/30">
-                                <CardHeader className="pb-2">
-                                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                    <MessageSquare className="h-4 w-4" />
-                                    Subject Comment
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                  <div className="flex flex-wrap items-center gap-4">
-                                    <div className="flex items-center gap-2">
-                                      <label className="text-sm text-muted-foreground shrink-0">
-                                        Attitude:
-                                      </label>
+                                {/* Subject Comment Section - Cleaner styling */}
+                                <div className="border-t-2 border-tisa-purple/20 bg-tisa-purple/5 p-4">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <MessageSquare className="h-4 w-4 text-tisa-purple" />
+                                    <h5 className="font-medium text-sm text-tisa-purple">Subject Comment</h5>
+                                  </div>
+                                  
+                                  {/* Inline Dropdowns Row */}
+                                  <div className="flex flex-wrap items-center gap-3 mb-3">
+                                    <div className="flex items-center gap-1.5 bg-background rounded-md px-2 py-1 border">
+                                      <span className="text-xs text-muted-foreground">Attitude:</span>
                                       <Select
                                         value={subjectComments[subject.id]?.attitudeTowardsLearning || ''}
                                         onValueChange={(val) => updateSubjectComment(subject.id, 'attitudeTowardsLearning', val)}
                                       >
-                                        <SelectTrigger className="w-[140px]">
-                                          <SelectValue placeholder="Select level" />
+                                        <SelectTrigger className="h-7 w-[110px] border-0 bg-transparent px-1 text-xs focus:ring-0">
+                                          <SelectValue placeholder="Select" />
                                         </SelectTrigger>
                                         <SelectContent>
                                           <SelectItem value="Emerging">Emerging</SelectItem>
@@ -1006,16 +1048,14 @@ That's the bar.`;
                                       </Select>
                                     </div>
                                     
-                                    <div className="flex items-center gap-2">
-                                      <label className="text-sm text-muted-foreground shrink-0">
-                                        Grade:
-                                      </label>
+                                    <div className="flex items-center gap-1.5 bg-background rounded-md px-2 py-1 border">
+                                      <span className="text-xs text-muted-foreground">Grade:</span>
                                       <Select
                                         value={subjectComments[subject.id]?.examGrade || ''}
                                         onValueChange={(val) => updateSubjectComment(subject.id, 'examGrade', val)}
                                       >
-                                        <SelectTrigger className="w-[90px]">
-                                          <SelectValue placeholder="Grade" />
+                                        <SelectTrigger className="h-7 w-[70px] border-0 bg-transparent px-1 text-xs focus:ring-0">
+                                          <SelectValue placeholder="—" />
                                         </SelectTrigger>
                                         <SelectContent>
                                           {GRADE_OPTIONS.map((grade) => (
@@ -1027,13 +1067,11 @@ That's the bar.`;
                                       </Select>
                                     </div>
                                     
-                                    <div className="flex items-center gap-2">
-                                      <label className="text-sm text-muted-foreground shrink-0">
-                                        Date:
-                                      </label>
+                                    <div className="flex items-center gap-1.5 bg-background rounded-md px-2 py-1 border">
+                                      <span className="text-xs text-muted-foreground">Date:</span>
                                       <input
                                         type="text"
-                                        className="w-[90px] px-2 py-1 text-sm border rounded-md bg-background"
+                                        className="h-7 w-[70px] text-xs bg-transparent border-0 focus:outline-none"
                                         placeholder="MM/YYYY"
                                         value={subjectComments[subject.id]?.examDate || ''}
                                         onChange={(e) => updateSubjectComment(subject.id, 'examDate', e.target.value)}
@@ -1043,29 +1081,31 @@ That's the bar.`;
                                   
                                   <Textarea
                                     placeholder="Overall comment for this subject..."
-                                    className="min-h-[80px]"
+                                    className="min-h-[70px] bg-background/80 text-sm"
                                     value={subjectComments[subject.id]?.teacherComment || ''}
                                     onChange={(e) => updateSubjectComment(subject.id, 'teacherComment', e.target.value)}
                                   />
 
-                                  <AIRewriteButtons
-                                    sourceText={subjectComments[subject.id]?.teacherComment || ''}
-                                    aiRewrittenText={subjectComments[subject.id]?.aiRewrittenComment || ''}
-                                    loadingKey={`subject-${subject.id}`}
-                                    studentName={selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'}
-                                    onRewrite={callAIRewrite}
-                                    onRewriteComplete={(result) => updateSubjectComment(subject.id, 'aiRewrittenComment', result)}
-                                    onAccept={() => acceptSubjectAIComment(subject.id, subjectComments[subject.id]?.aiRewrittenComment || '')}
-                                    isLoading={isAILoading}
-                                    aiTextareaClassName="min-h-[80px]"
-                                    onAITextChange={(text) => updateSubjectComment(subject.id, 'aiRewrittenComment', text)}
-                                  />
-                                </CardContent>
-                              </Card>
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      ))}
+                                  <div className="mt-2">
+                                    <AIRewriteButtons
+                                      sourceText={subjectComments[subject.id]?.teacherComment || ''}
+                                      aiRewrittenText={subjectComments[subject.id]?.aiRewrittenComment || ''}
+                                      loadingKey={`subject-${subject.id}`}
+                                      studentName={selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'}
+                                      onRewrite={callAIRewrite}
+                                      onRewriteComplete={(result) => updateSubjectComment(subject.id, 'aiRewrittenComment', result)}
+                                      onAccept={() => acceptSubjectAIComment(subject.id, subjectComments[subject.id]?.aiRewrittenComment || '')}
+                                      isLoading={isAILoading}
+                                      aiTextareaClassName="min-h-[70px]"
+                                      onAITextChange={(text) => updateSubjectComment(subject.id, 'aiRewrittenComment', text)}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        );
+                      })}
 
                       {/* Exam Results Summary Section */}
                       <ExamResultsSection

@@ -21,6 +21,7 @@ interface AIRewriteButtonsProps {
   aiTextareaClassName?: string;
   showAITextarea?: boolean;
   onAITextChange?: (text: string) => void;
+  compact?: boolean;
 }
 
 export function AIRewriteButtons({
@@ -35,6 +36,7 @@ export function AIRewriteButtons({
   aiTextareaClassName = 'min-h-[60px]',
   showAITextarea = true,
   onAITextChange,
+  compact = false,
 }: AIRewriteButtonsProps) {
   const quickKey = loadingKey;
   const tisaKey = `${loadingKey}-tisa`;
@@ -43,6 +45,44 @@ export function AIRewriteButtons({
   const isAnyLoading = isQuickLoading || isTisaLoading;
 
   if (!sourceText) return null;
+
+  // Compact mode - just icon buttons
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0"
+          disabled={isAnyLoading}
+          onClick={() => onRewrite(sourceText, quickKey, onRewriteComplete, 'quick', studentName)}
+          title="Quick rewrite"
+        >
+          {isQuickLoading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5 text-accent" />
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 hover:bg-tisa-purple/10"
+          disabled={isAnyLoading}
+          onClick={() => onRewrite(sourceText, tisaKey, onRewriteComplete, 'tisa', studentName)}
+          title="TISA style rewrite"
+        >
+          {isTisaLoading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Star className="h-3.5 w-3.5 text-tisa-purple" />
+          )}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <>
