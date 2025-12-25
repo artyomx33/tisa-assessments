@@ -1,4 +1,3 @@
-import { Star } from 'lucide-react';
 import type { ExamResult } from '@/types';
 
 interface ExamResultsDisplayProps {
@@ -14,26 +13,6 @@ export function ExamResultsDisplay({ examResults }: ExamResultsDisplayProps) {
     acc[result.term].push(result);
     return acc;
   }, {} as Record<string, ExamResult[]>);
-
-  const renderStars = (count: number, max: number = 3, isNA?: boolean) => {
-    if (isNA) {
-      return <span className="text-sm text-muted-foreground font-medium">N/A</span>;
-    }
-    return (
-      <div className="flex gap-0.5">
-        {Array.from({ length: max }).map((_, i) => (
-          <Star
-            key={i}
-            className={`h-4 w-4 ${
-              i < count
-                ? 'fill-yellow-400 text-yellow-400'
-                : 'fill-muted text-muted'
-            }`}
-          />
-        ))}
-      </div>
-    );
-  };
 
   return (
     <div className="overflow-hidden rounded-lg border border-border">
@@ -54,7 +33,7 @@ export function ExamResultsDisplay({ examResults }: ExamResultsDisplayProps) {
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground w-24">Date</th>
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground">Title</th>
                   <th className="px-4 py-2 text-left font-medium text-muted-foreground">Subject</th>
-                  <th className="px-4 py-2 text-left font-medium text-muted-foreground w-28">Grade</th>
+                  <th className="px-4 py-2 text-left font-medium text-muted-foreground w-20">Grade</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -63,7 +42,7 @@ export function ExamResultsDisplay({ examResults }: ExamResultsDisplayProps) {
                     <td className="px-4 py-2 text-sm">{result.date}</td>
                     <td className="px-4 py-2 text-sm">{result.title}</td>
                     <td className="px-4 py-2 text-sm font-medium">{result.subject}</td>
-                    <td className="px-4 py-2">{renderStars(result.grade, 3, result.isNA)}</td>
+                    <td className="px-4 py-2 text-sm font-bold">{result.grade || '-'}</td>
                   </tr>
                 ))}
               </tbody>
