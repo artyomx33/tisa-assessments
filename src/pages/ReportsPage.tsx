@@ -72,8 +72,12 @@ interface SubjectCommentState {
     teacherComment: string;
     aiRewrittenComment: string;
     attitudeTowardsLearning: 'Emerging' | 'Developing' | 'Applying' | 'Independent' | '';
+    examGrade: string;  // "A+", "A", "B+", etc.
+    examDate: string;   // "12/2025" format
   };
 }
+
+const GRADE_OPTIONS = ['A+', 'A', 'B+', 'B', 'C+', 'C', 'D', 'F'];
 
 export default function ReportsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -150,11 +154,16 @@ export default function ReportsPage() {
       const expandedIds = new Set<string>();
       
       assessment.subjects?.forEach((subject) => {
-        // Initialize subject comments
+        // Initialize subject comments with today's date
+        const today = new Date();
+        const todayFormatted = `${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+        
         newSubjectComments[subject.id] = {
           teacherComment: '',
           aiRewrittenComment: '',
           attitudeTowardsLearning: '',
+          examGrade: '',
+          examDate: todayFormatted,
         };
         
         subject.assessmentPoints?.forEach((point) => {
@@ -221,11 +230,6 @@ export default function ReportsPage() {
     setIsDialogOpen(true);
   };
 
-  // Get list of subjects for exam results
-  const examSubjects = selectedAssessment?.subjects
-    ?.filter(s => !s.name.includes('Learner Profile') && !s.name.includes('Work Habits') && !s.name.includes('Units of Inquiry'))
-    .map(s => s.name.replace(' - Term 1', '').replace(' - Term 2', ''))
-    .filter((v, i, a) => a.indexOf(v) === i) || [];
 
   const simulateAIRewrite = (text: string, callback: (rewritten: string) => void) => {
     if (!text.trim()) {
@@ -298,6 +302,28 @@ export default function ReportsPage() {
         attitudeTowardsLearning: value.attitudeTowardsLearning || undefined,
       }));
 
+    // Auto-generate exam results from subject grades
+    const generatedExamResults: ExamResult[] = Object.entries(subjectComments)
+      .filter(([_, value]) => value.examGrade)
+      .map(([subjectId, value]) => {
+        const subject = selectedAssessment?.subjects?.find(s => s.id === subjectId);
+        const subjectName = subject?.name || '';
+        // Extract term from subject name (e.g., "English - Term 1" -> "Term 1")
+        const termMatch = subjectName.match(/Term\s*\d/i);
+        const term = termMatch ? termMatch[0] : 'Term 1';
+        // Clean subject name (remove term)
+        const cleanSubjectName = subjectName.replace(/\s*-\s*Term\s*\d/i, '').trim();
+        
+        return {
+          id: crypto.randomUUID(),
+          term,
+          date: value.examDate,
+          title: 'Assessment of term skills',
+          subject: cleanSubjectName,
+          grade: value.examGrade,
+        };
+      });
+
     const newReport: StudentReport = {
       id: crypto.randomUUID(),
       studentId: data.studentId,
@@ -307,7 +333,7 @@ export default function ReportsPage() {
       entries: entryArray,
       subjectComments: subjectCommentArray,
       generalComment: generalCommentAI || generalComment,
-      examResults: examResults,
+      examResults: [...examResults, ...generatedExamResults],
       signatures: signatures,
       status: 'draft',
       createdAt: new Date().toISOString(),
@@ -612,24 +638,60 @@ export default function ReportsPage() {
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
-                                  <div className="flex items-center gap-3">
-                                    <label className="text-sm text-muted-foreground shrink-0">
-                                      Attitude:
-                                    </label>
-                                    <Select
-                                      value={subjectComments[subject.id]?.attitudeTowardsLearning || ''}
-                                      onValueChange={(val) => updateSubjectComment(subject.id, 'attitudeTowardsLearning', val)}
-                                    >
-                                      <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="Select level" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="Emerging">Emerging</SelectItem>
-                                        <SelectItem value="Developing">Developing</SelectItem>
-                                        <SelectItem value="Applying">Applying</SelectItem>
-                                        <SelectItem value="Independent">Independent</SelectItem>
-                                      </SelectContent>
-                                    </Select>
+                                  <div className="flex flex-wrap items-center gap-4">
+                                    <div className="flex items-center gap-2">
+                                      <label className="text-sm text-muted-foreground shrink-0">
+                                        Attitude:
+                                      </label>
+                                      <Select
+                                        value={subjectComments[subject.id]?.attitudeTowardsLearning || ''}
+                                        onValueChange={(val) => updateSubjectComment(subject.id, 'attitudeTowardsLearning', val)}
+                                      >
+                                        <SelectTrigger className="w-[140px]">
+                                          <SelectValue placeholder="Select level" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="Emerging">Emerging</SelectItem>
+                                          <SelectItem value="Developing">Developing</SelectItem>
+                                          <SelectItem value="Applying">Applying</SelectItem>
+                                          <SelectItem value="Independent">Independent</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <label className="text-sm text-muted-foreground shrink-0">
+                                        Grade:
+                                      </label>
+                                      <Select
+                                        value={subjectComments[subject.id]?.examGrade || ''}
+                                        onValueChange={(val) => updateSubjectComment(subject.id, 'examGrade', val)}
+                                      >
+                                        <SelectTrigger className="w-[90px]">
+                                          <SelectValue placeholder="Grade" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {GRADE_OPTIONS.map((grade) => (
+                                            <SelectItem key={grade} value={grade}>
+                                              {grade}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <label className="text-sm text-muted-foreground shrink-0">
+                                        Date:
+                                      </label>
+                                      <input
+                                        type="text"
+                                        className="w-[90px] px-2 py-1 text-sm border rounded-md bg-background"
+                                        placeholder="MM/YYYY"
+                                        value={subjectComments[subject.id]?.examDate || ''}
+                                        onChange={(e) => updateSubjectComment(subject.id, 'examDate', e.target.value)}
+                                      />
+                                    </div>
                                   </div>
                                   
                                   <Textarea
@@ -671,13 +733,11 @@ export default function ReportsPage() {
                         </Collapsible>
                       ))}
 
-                      {/* Exam Results Section */}
+                      {/* Exam Results Summary Section */}
                       <ExamResultsSection
                         examResults={examResults}
-                        onAdd={(result) => setExamResults([...examResults, { ...result, id: crypto.randomUUID() }])}
                         onUpdate={(id, updates) => setExamResults(examResults.map(e => e.id === id ? { ...e, ...updates } : e))}
                         onDelete={(id) => setExamResults(examResults.filter(e => e.id !== id))}
-                        subjects={examSubjects}
                       />
 
                       {/* Signature Section */}

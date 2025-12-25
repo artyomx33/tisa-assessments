@@ -107,11 +107,10 @@ export type SubjectComment = z.infer<typeof subjectCommentSchema>;
 export const examResultSchema = z.object({
   id: z.string(),
   term: z.string(),              // "Term 1", "Term 2"
-  date: z.string(),              // "10/2025" format
+  date: z.string(),              // "12/2025" format
   title: z.string(),             // "Assessment of term skills"
   subject: z.string(),           // "English", "Math", etc.
-  grade: z.number().min(0).max(3), // 0-3 stars
-  isNA: z.boolean().optional(),
+  grade: z.string().optional(),  // "A+", "A", "B+", "B", "C+", "C", "D", "F" or empty
 });
 
 export type ExamResult = z.infer<typeof examResultSchema>;
