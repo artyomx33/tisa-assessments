@@ -294,19 +294,22 @@ export default function ReportsPage() {
     setIsAILoading(prev => ({ ...prev, [loadingKey]: true }));
 
     try {
+      // Default to lovable if not set
+      const provider = appSettings.aiProvider || 'lovable';
+      
       // Determine which API key to use based on provider
       let customApiKey = '';
-      if (appSettings.aiProvider === 'openai') {
-        customApiKey = appSettings.openaiApiKey;
-      } else if (appSettings.aiProvider === 'google') {
-        customApiKey = appSettings.googleApiKey;
-      } else if (appSettings.aiProvider === 'anthropic') {
-        customApiKey = appSettings.anthropicApiKey;
+      if (provider === 'openai') {
+        customApiKey = appSettings.openaiApiKey || '';
+      } else if (provider === 'google') {
+        customApiKey = appSettings.googleApiKey || '';
+      } else if (provider === 'anthropic') {
+        customApiKey = appSettings.anthropicApiKey || '';
       }
 
       // Check if custom provider is selected but no API key provided
-      if (appSettings.aiProvider !== 'lovable' && !customApiKey) {
-        toast.error(`Please add your ${appSettings.aiProvider} API key in Settings`);
+      if (provider !== 'lovable' && !customApiKey) {
+        toast.error(`Please add your ${provider} API key in Settings`);
         setIsAILoading(prev => ({ ...prev, [loadingKey]: false }));
         return;
       }
@@ -315,7 +318,7 @@ export default function ReportsPage() {
         body: {
           text,
           styleGuide: appSettings.companyWritingStyle,
-          provider: appSettings.aiProvider,
+          provider,
           customApiKey: customApiKey || undefined,
         },
       });
