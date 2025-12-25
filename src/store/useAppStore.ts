@@ -99,6 +99,10 @@ const defaultAppSettings: AppSettings = {
   values: ['Respect', 'Integrity', 'Courage', 'Curiosity', 'Care'],
   gradingKey: '⭐⭐⭐ - Mostly\n⭐⭐ - Usually\n⭐ - Rarely',
   companyWritingStyle: '',
+  aiProvider: 'lovable',
+  openaiApiKey: '',
+  googleApiKey: '',
+  anthropicApiKey: '',
 };
 
 // Helper to create assessment points

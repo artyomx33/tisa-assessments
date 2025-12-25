@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, Calendar, Check, Building2, Target, Eye, Heart, X } from 'lucide-react';
+import { Plus, Trash2, Calendar, Check, Building2, Target, Eye, Heart, X, Bot, Key, Sparkles } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,6 +28,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const schoolYearFormSchema = z.object({
@@ -198,6 +205,113 @@ export default function SettingsPage() {
               />
               <p className="text-xs text-muted-foreground">Used by AI when rewriting teacher comments</p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* AI Provider Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5" />
+              AI Settings
+            </CardTitle>
+            <CardDescription>
+              Configure the AI provider for comment rewriting. By default, Lovable AI is used (no setup required).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">AI Provider</label>
+              <Select
+                value={appSettings.aiProvider}
+                onValueChange={(value: 'lovable' | 'openai' | 'google' | 'anthropic') => 
+                  updateAppSettings({ aiProvider: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select AI Provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lovable">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span>Lovable AI (Default - No API Key Required)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="openai">
+                    <div className="flex items-center gap-2">
+                      <Bot className="h-4 w-4" />
+                      <span>OpenAI (GPT-4)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="google">
+                    <div className="flex items-center gap-2">
+                      <Bot className="h-4 w-4" />
+                      <span>Google (Gemini)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="anthropic">
+                    <div className="flex items-center gap-2">
+                      <Bot className="h-4 w-4" />
+                      <span>Anthropic (Claude)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {appSettings.aiProvider === 'lovable' 
+                  ? 'Using Lovable AI - no configuration needed!'
+                  : 'You need to provide your own API key below'}
+              </p>
+            </div>
+
+            {appSettings.aiProvider === 'openai' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  OpenAI API Key
+                </label>
+                <Input
+                  type="password"
+                  placeholder="sk-..."
+                  value={appSettings.openaiApiKey}
+                  onChange={(e) => updateAppSettings({ openaiApiKey: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Get your API key from platform.openai.com</p>
+              </div>
+            )}
+
+            {appSettings.aiProvider === 'google' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  Google AI API Key
+                </label>
+                <Input
+                  type="password"
+                  placeholder="AI..."
+                  value={appSettings.googleApiKey}
+                  onChange={(e) => updateAppSettings({ googleApiKey: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Get your API key from aistudio.google.com</p>
+              </div>
+            )}
+
+            {appSettings.aiProvider === 'anthropic' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  Anthropic API Key
+                </label>
+                <Input
+                  type="password"
+                  placeholder="sk-ant-..."
+                  value={appSettings.anthropicApiKey}
+                  onChange={(e) => updateAppSettings({ anthropicApiKey: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Get your API key from console.anthropic.com</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
