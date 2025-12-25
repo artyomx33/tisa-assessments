@@ -285,7 +285,77 @@ export default function ReportsPage() {
   };
 
 
-  const callAIRewrite = async (text: string, loadingKey: string, callback: (rewritten: string) => void) => {
+  // TISA Style Guide for extended rewrite mode
+  const TISA_STYLE_GUIDE = `⚡ TISA REPORT CARD AI STYLE GUIDE
+
+🎯 Purpose
+Turn raw teacher notes into clear, human, confidence-building insights that reflect how TISA actually sees children:
+Not as grades. Not as checkboxes. But as becoming humans.
+
+🧠 The Core Rule (Read This Twice)
+Do not polish children into perfection. Do not hide growth edges. Do not invent excellence.
+Your job is to translate truth into momentum.
+
+🧬 The TISA Lens (Non‑Negotiable)
+Every comment must answer at least one of these:
+- What strength is already alive in this child?
+- What is forming right now?
+- What is the next step — not the flaw?
+We don't judge snapshots. We describe trajectories.
+
+🗣 Tone (This Is Where Most Systems Fail)
+Write like a calm, intelligent human speaking to another intelligent human.
+Warm, grounded, precise. Never fluffy. Never cold. Never corporate.
+If it sounds like HR — rewrite it. If it sounds like marketing — delete it.
+
+🧱 Structure (2–3 Sentences. No More.)
+- Anchor — a real strength (specific if provided)
+- Edge — a growth point, framed as direction
+- Forward pull — confidence + expectation
+That's it. No essays. No padding.
+
+🧠 Language Rules (Hard Lines)
+✅ Use: is developing, is learning to, shows growing confidence in, is beginning to, brings curiosity / care / initiative / structure
+❌ Never use: struggles, fails, can't / won't, weak / poor, always / never
+We don't label identity. We describe movement.
+
+🧭 Preserve the Teacher's Truth
+- Keep specific examples the teacher mentioned
+- Do not erase concerns
+- Do not exaggerate positives
+- If a teacher writes something sharp — you soften the frame, not the fact.
+
+💥 Reframing Examples
+Teacher: "Emma struggles with math."
+TISA AI: "Emma is building her mathematical foundations and shows determination when working through challenging problems."
+
+Teacher: "He talked too much during group work but had good ideas."
+TISA AI: "He brings strong ideas into group work and is learning to balance sharing his thoughts with listening to others."
+
+🌍 TISA Values (Woven, Not Announced)
+You may subtly reflect these when relevant: Curiosity, Courage, Care, Systemic thinking, Character, Communication, Dream → Action
+Never list them. Let them show through behavior.
+
+📏 Length Discipline
+Standard comment: 2–3 sentences. If it needs more → something is wrong upstream. Concise = respectful.
+
+🧠 Final Check Before Output
+Ask yourself: Would this make a parent feel seen, informed, and calmly confident?
+If yes — ship it. If not — rewrite.
+
+🔥 One Last Thing (Very Important)
+TISA report cards are not documents. They are mirrors.
+When a child reads this in five years, they should recognize themselves — and feel pulled forward.
+That's the bar.`;
+
+  const QUICK_STYLE_GUIDE = `Rewrite this text professionally:
+- Fix any grammar or spelling errors
+- Make it clear and concise
+- Keep a warm, professional tone suitable for a school report
+- Preserve the original meaning and any specific observations
+- Keep it brief (2-3 sentences maximum)`;
+
+  const callAIRewrite = async (text: string, loadingKey: string, callback: (rewritten: string) => void, mode: 'quick' | 'tisa' = 'quick') => {
     if (!text.trim()) {
       toast.error('Please enter some text first');
       return;
@@ -314,10 +384,13 @@ export default function ReportsPage() {
         return;
       }
 
+      // Select style guide based on mode
+      const styleGuide = mode === 'tisa' ? TISA_STYLE_GUIDE : QUICK_STYLE_GUIDE;
+
       const { data, error } = await supabase.functions.invoke('ai-rewrite', {
         body: {
           text,
-          styleGuide: appSettings.companyWritingStyle,
+          styleGuide,
           provider,
           customApiKey: customApiKey || undefined,
         },
@@ -336,7 +409,7 @@ export default function ReportsPage() {
 
       if (data?.rewrittenText) {
         callback(data.rewrittenText);
-        toast.success('Text rewritten by AI!');
+        toast.success(mode === 'tisa' ? 'TISA-style rewrite complete!' : 'Quick rewrite complete!');
       }
     } catch (err) {
       console.error('AI rewrite error:', err);
@@ -722,11 +795,12 @@ export default function ReportsPage() {
                                               variant="outline"
                                               size="sm"
                                               className="gap-2"
-                                              disabled={isAILoading[key]}
+                                              disabled={isAILoading[key] || isAILoading[`${key}-tisa`]}
                                               onClick={() => callAIRewrite(
                                                 entry.teacherNotes,
                                                 key,
-                                                (rewritten) => updateEntry(subject.id, point.id, 'aiRewrittenText', rewritten)
+                                                (rewritten) => updateEntry(subject.id, point.id, 'aiRewrittenText', rewritten),
+                                                'quick'
                                               )}
                                             >
                                               {isAILoading[key] ? (
@@ -734,7 +808,27 @@ export default function ReportsPage() {
                                               ) : (
                                                 <Sparkles className="h-3.5 w-3.5 text-accent" />
                                               )}
-                                              {isAILoading[key] ? 'Rewriting...' : 'AI Rewrite'}
+                                              {isAILoading[key] ? 'Rewriting...' : 'Quick'}
+                                            </Button>
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="sm"
+                                              className="gap-2 border-tisa-purple/30 hover:bg-tisa-purple/10"
+                                              disabled={isAILoading[key] || isAILoading[`${key}-tisa`]}
+                                              onClick={() => callAIRewrite(
+                                                entry.teacherNotes,
+                                                `${key}-tisa`,
+                                                (rewritten) => updateEntry(subject.id, point.id, 'aiRewrittenText', rewritten),
+                                                'tisa'
+                                              )}
+                                            >
+                                              {isAILoading[`${key}-tisa`] ? (
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                              ) : (
+                                                <Star className="h-3.5 w-3.5 text-tisa-purple" />
+                                              )}
+                                              {isAILoading[`${key}-tisa`] ? 'Rewriting...' : 'TISA'}
                                             </Button>
                                           </div>
                                         )}
@@ -851,11 +945,12 @@ export default function ReportsPage() {
                                         variant="outline"
                                         size="sm"
                                         className="gap-2"
-                                        disabled={isAILoading[`subject-${subject.id}`]}
+                                        disabled={isAILoading[`subject-${subject.id}`] || isAILoading[`subject-${subject.id}-tisa`]}
                                         onClick={() => callAIRewrite(
                                           subjectComments[subject.id].teacherComment,
                                           `subject-${subject.id}`,
-                                          (rewritten) => updateSubjectComment(subject.id, 'aiRewrittenComment', rewritten)
+                                          (rewritten) => updateSubjectComment(subject.id, 'aiRewrittenComment', rewritten),
+                                          'quick'
                                         )}
                                       >
                                         {isAILoading[`subject-${subject.id}`] ? (
@@ -863,7 +958,27 @@ export default function ReportsPage() {
                                         ) : (
                                           <Sparkles className="h-3.5 w-3.5 text-accent" />
                                         )}
-                                        {isAILoading[`subject-${subject.id}`] ? 'Rewriting...' : 'AI Rewrite'}
+                                        {isAILoading[`subject-${subject.id}`] ? 'Rewriting...' : 'Quick'}
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2 border-tisa-purple/30 hover:bg-tisa-purple/10"
+                                        disabled={isAILoading[`subject-${subject.id}`] || isAILoading[`subject-${subject.id}-tisa`]}
+                                        onClick={() => callAIRewrite(
+                                          subjectComments[subject.id].teacherComment,
+                                          `subject-${subject.id}-tisa`,
+                                          (rewritten) => updateSubjectComment(subject.id, 'aiRewrittenComment', rewritten),
+                                          'tisa'
+                                        )}
+                                      >
+                                        {isAILoading[`subject-${subject.id}-tisa`] ? (
+                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        ) : (
+                                          <Star className="h-3.5 w-3.5 text-tisa-purple" />
+                                        )}
+                                        {isAILoading[`subject-${subject.id}-tisa`] ? 'Rewriting...' : 'TISA'}
                                       </Button>
                                     </div>
                                   )}
@@ -954,15 +1069,30 @@ export default function ReportsPage() {
                                 variant="outline"
                                 size="sm"
                                 className="gap-2"
-                                disabled={isAILoading['general']}
-                                onClick={() => callAIRewrite(generalComment, 'general', setGeneralCommentAI)}
+                                disabled={isAILoading['general'] || isAILoading['general-tisa']}
+                                onClick={() => callAIRewrite(generalComment, 'general', setGeneralCommentAI, 'quick')}
                               >
                                 {isAILoading['general'] ? (
                                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 ) : (
                                   <Sparkles className="h-3.5 w-3.5 text-accent" />
                                 )}
-                                {isAILoading['general'] ? 'Rewriting...' : 'AI Rewrite'}
+                                {isAILoading['general'] ? 'Rewriting...' : 'Quick'}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="gap-2 border-tisa-purple/30 hover:bg-tisa-purple/10"
+                                disabled={isAILoading['general'] || isAILoading['general-tisa']}
+                                onClick={() => callAIRewrite(generalComment, 'general-tisa', setGeneralCommentAI, 'tisa')}
+                              >
+                                {isAILoading['general-tisa'] ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Star className="h-3.5 w-3.5 text-tisa-purple" />
+                                )}
+                                {isAILoading['general-tisa'] ? 'Rewriting...' : 'TISA'}
                               </Button>
                             </div>
                           )}
