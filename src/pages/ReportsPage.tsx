@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy, Pencil, Filter, User, UserCircle, GraduationCap, Calendar, Users, Briefcase, Target, Heart, Loader2, Image, Wand2 } from 'lucide-react';
+import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy, Pencil, Filter, User, UserCircle, GraduationCap, Calendar, Users, Briefcase, Target, Heart, Loader2, Image, Wand2, CheckCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -897,41 +897,61 @@ That's the bar.`;
                             open={expandedSubjects.has(subject.id)}
                             onOpenChange={() => toggleSubject(subject.id)}
                           >
-                            {/* TISA Blue Header Banner */}
-                            <CollapsibleTrigger asChild>
-                              <div className="cursor-pointer rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                <div className="bg-tisa-blue px-4 py-3 flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <BookOpen className="h-5 w-5 text-white/90" />
-                                    <div>
-                                      <h4 className="font-display font-semibold text-white uppercase tracking-wide text-sm">
-                                        {subject.name}
-                                      </h4>
-                                      {subject.description && (
-                                        <p className="text-white/70 text-xs mt-0.5">{subject.description}</p>
-                                      )}
+                            {/* Subject Header Banner - Purple (needs work) or Green (complete) */}
+                            {(() => {
+                              const subjectData = subjectComments[subject.id];
+                              const isComplete = subjectData?.examGrade && subjectData.examGrade !== '';
+                              const headerBg = isComplete ? 'bg-green-100' : 'bg-tisa-purple/15';
+                              const headerText = isComplete ? 'text-green-700' : 'text-tisa-purple';
+                              const iconColor = isComplete ? 'text-green-600' : 'text-tisa-purple/80';
+                              const badgeBg = isComplete ? 'bg-green-200/60 text-green-700' : 'bg-tisa-purple/20 text-tisa-purple';
+                              
+                              return (
+                                <CollapsibleTrigger asChild>
+                                  <div className="cursor-pointer rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all">
+                                    <div className={`${headerBg} px-4 py-3 flex items-center justify-between transition-colors`}>
+                                      <div className="flex items-center gap-3">
+                                        {isComplete ? (
+                                          <CheckCircle className={`h-5 w-5 ${iconColor}`} />
+                                        ) : (
+                                          <BookOpen className={`h-5 w-5 ${iconColor}`} />
+                                        )}
+                                        <div>
+                                          <h4 className={`font-display font-semibold ${headerText} uppercase tracking-wide text-sm`}>
+                                            {subject.name}
+                                          </h4>
+                                          {subject.description && (
+                                            <p className={`${isComplete ? 'text-green-600/70' : 'text-tisa-purple/60'} text-xs mt-0.5`}>{subject.description}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2">
+                                          <Badge className={`${badgeBg} border-0 text-xs`}>
+                                            {subjectPoints.length} points
+                                          </Badge>
+                                          {completedNotes > 0 && (
+                                            <Badge className={`${isComplete ? 'bg-green-200/80 text-green-700' : 'bg-tisa-purple/25 text-tisa-purple'} border-0 text-xs`}>
+                                              {completedNotes} notes
+                                            </Badge>
+                                          )}
+                                          {isComplete && (
+                                            <Badge className="bg-green-500 text-white border-0 text-xs">
+                                              {subjectData.examGrade}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        {expandedSubjects.has(subject.id) ? (
+                                          <ChevronDown className={`h-5 w-5 ${isComplete ? 'text-green-600' : 'text-tisa-purple/70'}`} />
+                                        ) : (
+                                          <ChevronRight className={`h-5 w-5 ${isComplete ? 'text-green-600' : 'text-tisa-purple/70'}`} />
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2">
-                                      <Badge className="bg-white/20 text-white border-0 text-xs">
-                                        {subjectPoints.length} points
-                                      </Badge>
-                                      {completedNotes > 0 && (
-                                        <Badge className="bg-white/30 text-white border-0 text-xs">
-                                          {completedNotes} notes
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    {expandedSubjects.has(subject.id) ? (
-                                      <ChevronDown className="h-5 w-5 text-white/80" />
-                                    ) : (
-                                      <ChevronRight className="h-5 w-5 text-white/80" />
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </CollapsibleTrigger>
+                                </CollapsibleTrigger>
+                              );
+                            })()}
 
                             <CollapsibleContent>
                               <div className="border border-t-0 border-border rounded-b-lg bg-card overflow-hidden">
