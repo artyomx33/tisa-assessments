@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Pencil, Trash2, Users, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Search, Camera } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -43,6 +43,7 @@ const studentFormSchema = z.object({
   nameUsed: z.string().optional(),
   dateOfBirth: z.date().optional(),
   gradeId: z.string().min(1, 'Please select a grade'),
+  avatarUrl: z.string().optional(),
 });
 
 type StudentFormValues = z.infer<typeof studentFormSchema>;
@@ -63,8 +64,20 @@ export default function StudentsPage() {
       nameUsed: '',
       dateOfBirth: undefined,
       gradeId: '',
+      avatarUrl: '',
     },
   });
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue('avatarUrl', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const activeStudents = students.filter((s) => s.schoolYearId === activeSchoolYearId);
 
@@ -78,7 +91,7 @@ export default function StudentsPage() {
   });
 
   const openCreateDialog = () => {
-    form.reset({ firstName: '', lastName: '', nameUsed: '', dateOfBirth: undefined, gradeId: '' });
+    form.reset({ firstName: '', lastName: '', nameUsed: '', dateOfBirth: undefined, gradeId: '', avatarUrl: '' });
     setEditingStudent(null);
     setIsDialogOpen(true);
   };
@@ -90,6 +103,7 @@ export default function StudentsPage() {
       nameUsed: student.nameUsed || '',
       dateOfBirth: student.dateOfBirth ? new Date(student.dateOfBirth) : undefined,
       gradeId: student.gradeId,
+      avatarUrl: student.avatarUrl || '',
     });
     setEditingStudent(student.id);
     setIsDialogOpen(true);
@@ -102,6 +116,7 @@ export default function StudentsPage() {
       nameUsed: data.nameUsed || undefined,
       dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : undefined,
       gradeId: data.gradeId,
+      avatarUrl: data.avatarUrl || undefined,
     };
 
     if (editingStudent) {
@@ -251,6 +266,57 @@ export default function StudentsPage() {
                       </FormItem>
                     )}
                   />
+                  
+                  {/* Photo Upload */}
+                  <FormField
+                    control={form.control}
+                    name="avatarUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Student Photo</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center gap-4">
+                            {field.value ? (
+                              <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-border">
+                                <img 
+                                  src={field.value} 
+                                  alt="Student" 
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted border-2 border-dashed border-border">
+                                <Camera className="h-6 w-6 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={handlePhotoUpload}
+                                className="cursor-pointer"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Upload a photo (optional)
+                              </p>
+                            </div>
+                            {field.value && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => form.setValue('avatarUrl', '')}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
@@ -325,12 +391,22 @@ export default function StudentsPage() {
                         <Card className="group transition-all hover:shadow-md">
                           <CardContent className="p-4">
                             <div className="flex items-center gap-3">
-                              <div
-                                className="flex h-10 w-10 items-center justify-center rounded-full text-primary-foreground font-medium text-sm"
-                                style={{ backgroundColor: `hsl(var(--grade-${grade.colorIndex}))` }}
-                              >
-                                {student.firstName[0]}{student.lastName[0]}
-                              </div>
+                              {student.avatarUrl ? (
+                                <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0">
+                                  <img 
+                                    src={student.avatarUrl} 
+                                    alt={`${student.firstName} ${student.lastName}`}
+                                    className="h-full w-full object-cover"
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  className="flex h-10 w-10 items-center justify-center rounded-full text-primary-foreground font-medium text-sm flex-shrink-0"
+                                  style={{ backgroundColor: `hsl(var(--grade-${grade.colorIndex}))` }}
+                                >
+                                  {student.firstName[0]}{student.lastName[0]}
+                                </div>
+                              )}
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium truncate">
                                   {student.firstName} {student.lastName}
