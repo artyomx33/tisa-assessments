@@ -71,8 +71,26 @@ export default function SharedReportPage() {
 
         <div className="bg-card shadow-lg">
           {/* TISA Purple Header Banner */}
-          <div className="bg-tisa-purple text-white p-4 flex items-center justify-between">
-            <div className="text-left">
+          <div className="bg-tisa-purple text-white p-4 flex items-center gap-4">
+            {/* Student Photo in Header */}
+            <div className="flex-shrink-0">
+              {student?.avatarUrl ? (
+                <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-white shadow-lg">
+                  <img 
+                    src={student.avatarUrl} 
+                    alt={`${student.firstName} ${student.lastName}`}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-white/20 border-2 border-white flex items-center justify-center">
+                  <span className="text-lg font-bold text-white">
+                    {student?.firstName?.[0]}{student?.lastName?.[0]}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="text-left flex-1">
               <h1 className="font-display text-xl font-bold uppercase tracking-widest">
                 {report.reportTitle || 'STUDENT PROGRESS REPORT'}
               </h1>
@@ -95,18 +113,6 @@ export default function SharedReportPage() {
                 Student Information
               </div>
               <div className="flex">
-                {/* Student Photo */}
-                {student?.avatarUrl && (
-                  <div className="p-4 flex items-center justify-center border-r border-border bg-muted/30">
-                    <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-tisa-purple">
-                      <img 
-                        src={student.avatarUrl} 
-                        alt={`${student.firstName} ${student.lastName}`}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  </div>
-                )}
                 <div className="flex-1 grid grid-cols-2 divide-x divide-border">
                   <div className="divide-y divide-border">
                     <div className="flex">

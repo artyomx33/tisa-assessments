@@ -92,7 +92,7 @@ export default function ReportsPage() {
   const [generalCommentAI, setGeneralCommentAI] = useState('');
   const [examResults, setExamResults] = useState<ExamResult[]>([]);
   const [signatures, setSignatures] = useState<ReportSignature>({});
-  const [showCommentsOnly, setShowCommentsOnly] = useState(false);
+  const [starFilters, setStarFilters] = useState({ oneStar: false, twoStars: false, threeStars: false, comments: false });
   const [copiedLink, setCopiedLink] = useState(false);
 
   const {
@@ -1051,7 +1051,25 @@ export default function ReportsPage() {
               return (
                 <div className="bg-card">
                   {/* TISA Purple Header Banner - Horizontal Layout */}
-                  <div className="bg-tisa-purple text-white p-4 flex items-center justify-between">
+                  <div className="bg-tisa-purple text-white p-4 flex items-center gap-4">
+                    {/* Student Photo in Header */}
+                    <div className="flex-shrink-0">
+                      {reportStudent?.avatarUrl ? (
+                        <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-white shadow-lg">
+                          <img 
+                            src={reportStudent.avatarUrl} 
+                            alt={`${reportStudent.firstName} ${reportStudent.lastName}`}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-16 w-16 rounded-full bg-white/20 border-2 border-white flex items-center justify-center">
+                          <span className="text-lg font-bold text-white">
+                            {reportStudent?.firstName?.[0]}{reportStudent?.lastName?.[0]}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     <div className="text-left flex-1">
                       <h1 className="font-display text-xl font-bold uppercase tracking-widest">
                         {viewingReport.reportTitle || 'STUDENT PROGRESS REPORT'}
@@ -1100,18 +1118,6 @@ export default function ReportsPage() {
                         Student Information
                       </div>
                       <div className="flex">
-                        {/* Student Photo */}
-                        {reportStudent?.avatarUrl && (
-                          <div className="p-4 flex items-center justify-center border-r border-border bg-muted/30">
-                            <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-tisa-purple">
-                              <img 
-                                src={reportStudent.avatarUrl} 
-                                alt={`${reportStudent.firstName} ${reportStudent.lastName}`}
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
-                          </div>
-                        )}
                         <div className="flex-1 grid grid-cols-2 divide-x divide-border">
                           <div className="divide-y divide-border">
                             <div className="flex">
@@ -1257,32 +1263,65 @@ export default function ReportsPage() {
                       </div>
                     )}
 
-                    {/* Subjects Filter Toggle */}
-                    <div className="flex items-center justify-between">
+                    {/* Subjects Filter Buttons */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Subject Assessments</h3>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={showCommentsOnly}
-                          onChange={(e) => setShowCommentsOnly(e.target.checked)}
-                          className="rounded border-border"
-                        />
-                        <span className="text-sm text-muted-foreground flex items-center gap-1">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={starFilters.oneStar ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setStarFilters(prev => ({ ...prev, oneStar: !prev.oneStar }))}
+                          className="h-8 px-3 gap-1"
+                        >
+                          <Star className="h-3.5 w-3.5 fill-star-filled text-star-filled" />
+                          <span className="text-xs">1</span>
+                        </Button>
+                        <Button
+                          variant={starFilters.twoStars ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setStarFilters(prev => ({ ...prev, twoStars: !prev.twoStars }))}
+                          className="h-8 px-3 gap-1"
+                        >
+                          <Star className="h-3.5 w-3.5 fill-star-filled text-star-filled" />
+                          <span className="text-xs">2</span>
+                        </Button>
+                        <Button
+                          variant={starFilters.threeStars ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setStarFilters(prev => ({ ...prev, threeStars: !prev.threeStars }))}
+                          className="h-8 px-3 gap-1"
+                        >
+                          <Star className="h-3.5 w-3.5 fill-star-filled text-star-filled" />
+                          <span className="text-xs">3</span>
+                        </Button>
+                        <Button
+                          variant={starFilters.comments ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setStarFilters(prev => ({ ...prev, comments: !prev.comments }))}
+                          className="h-8 px-3 gap-1.5"
+                        >
                           <Filter className="h-3.5 w-3.5" />
-                          Show comments only
-                        </span>
-                      </label>
+                          <span className="text-xs">Comments</span>
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Subjects and Assessment Points */}
                     {reportAssessment?.subjects
                       .filter((subject) => {
-                        if (!showCommentsOnly) return true;
-                        const subjectComment = viewingReport.subjectComments?.find((c) => c.subjectId === subject.id);
-                        const hasComment = subjectComment?.teacherComment || subjectComment?.aiRewrittenComment;
+                        const noFiltersActive = !starFilters.oneStar && !starFilters.twoStars && !starFilters.threeStars && !starFilters.comments;
+                        if (noFiltersActive) return true;
+                        
                         const subjectEntries = viewingReport.entries.filter((e) => e.subjectId === subject.id);
-                        const hasTeacherNotes = subjectEntries.some((e) => e.teacherNotes || e.aiRewrittenText);
-                        return hasComment || hasTeacherNotes;
+                        
+                        const hasOneStar = starFilters.oneStar && subjectEntries.some(e => e.stars === 1);
+                        const hasTwoStars = starFilters.twoStars && subjectEntries.some(e => e.stars === 2);
+                        const hasThreeStars = starFilters.threeStars && subjectEntries.some(e => e.stars === 3);
+                        
+                        const subjectComment = viewingReport.subjectComments?.find((c) => c.subjectId === subject.id);
+                        const hasComment = starFilters.comments && (subjectComment?.teacherComment || subjectComment?.aiRewrittenComment || subjectEntries.some((e) => e.teacherNotes || e.aiRewrittenText));
+                        
+                        return hasOneStar || hasTwoStars || hasThreeStars || hasComment;
                       })
                       .map((subject) => {
                         const subjectEntries = viewingReport.entries.filter((e) => e.subjectId === subject.id);
