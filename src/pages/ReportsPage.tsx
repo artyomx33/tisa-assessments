@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy } from 'lucide-react';
+import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy, Pencil, Filter } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -88,13 +88,17 @@ export default function ReportsPage() {
   const [subjectComments, setSubjectComments] = useState<SubjectCommentState>({});
   const [generalComment, setGeneralComment] = useState('');
   const [viewingReport, setViewingReport] = useState<StudentReport | null>(null);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [generalCommentAI, setGeneralCommentAI] = useState('');
   const [examResults, setExamResults] = useState<ExamResult[]>([]);
   const [signatures, setSignatures] = useState<ReportSignature>({});
+  const [showCommentsOnly, setShowCommentsOnly] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const {
     reports,
     addReport,
+    updateReport,
     students,
     assessmentTemplates,
     grades,
@@ -222,10 +226,58 @@ export default function ReportsPage() {
     setExamResults([]);
     setSignatures({});
     setExpandedSubjects(new Set());
+    setEditingReportId(null);
     form.reset({
       studentId: '',
       assessmentTemplateId: '',
       term: 'Term 1 & 2',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (report: StudentReport) => {
+    const assessment = assessmentTemplates.find(a => a.id === report.assessmentTemplateId);
+    
+    // Restore entries
+    const restoredEntries: EntryState = {};
+    report.entries.forEach((entry) => {
+      const key = `${entry.subjectId}:${entry.assessmentPointId}`;
+      restoredEntries[key] = {
+        stars: entry.stars,
+        isNA: entry.isNA || false,
+        teacherNotes: entry.teacherNotes || '',
+        aiRewrittenText: entry.aiRewrittenText || '',
+      };
+    });
+
+    // Restore subject comments
+    const restoredSubjectComments: SubjectCommentState = {};
+    assessment?.subjects?.forEach((subject) => {
+      const existingComment = report.subjectComments?.find(c => c.subjectId === subject.id);
+      restoredSubjectComments[subject.id] = {
+        teacherComment: existingComment?.teacherComment || '',
+        aiRewrittenComment: existingComment?.aiRewrittenComment || '',
+        attitudeTowardsLearning: existingComment?.attitudeTowardsLearning || '',
+        examGrade: '',
+        examDate: '',
+      };
+    });
+
+    setSelectedStudentId(report.studentId);
+    setSelectedAssessmentId(report.assessmentTemplateId);
+    setEntries(restoredEntries);
+    setSubjectComments(restoredSubjectComments);
+    setGeneralComment(report.generalComment || '');
+    setGeneralCommentAI('');
+    setExamResults(report.examResults || []);
+    setSignatures(report.signatures || {});
+    setExpandedSubjects(new Set(assessment?.subjects?.map(s => s.id) || []));
+    setEditingReportId(report.id);
+    
+    form.reset({
+      studentId: report.studentId,
+      assessmentTemplateId: report.assessmentTemplateId,
+      term: report.term,
     });
     setIsDialogOpen(true);
   };
@@ -340,9 +392,21 @@ export default function ReportsPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    addReport(newReport);
-    toast.success('Report saved successfully');
+    if (editingReportId) {
+      // Update existing report
+      updateReport(editingReportId, {
+        ...newReport,
+        id: editingReportId,
+        updatedAt: new Date().toISOString(),
+      });
+      toast.success('Report updated successfully');
+    } else {
+      addReport(newReport);
+      toast.success('Report saved successfully');
+    }
+    
     setIsDialogOpen(false);
+    setEditingReportId(null);
     form.reset();
     setEntries({});
     setSubjectComments({});
@@ -940,7 +1004,15 @@ export default function ReportsPage() {
                             <Eye className="h-3.5 w-3.5" />
                             View
                           </Button>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex-1 gap-2"
+                            onClick={() => openEditDialog(report)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -980,7 +1052,7 @@ export default function ReportsPage() {
                 <div className="bg-card">
                   {/* TISA Purple Header Banner - Horizontal Layout */}
                   <div className="bg-tisa-purple text-white p-4 flex items-center justify-between">
-                    <div className="text-left">
+                    <div className="text-left flex-1">
                       <h1 className="font-display text-xl font-bold uppercase tracking-widest">
                         {viewingReport.reportTitle || 'STUDENT PROGRESS REPORT'}
                       </h1>
@@ -993,7 +1065,32 @@ export default function ReportsPage() {
                         </p>
                       )}
                     </div>
-                    <img src={tisaLogo} alt="TISA Logo" className="h-20 w-auto" />
+                    <div className="flex items-center gap-4">
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        className="gap-2 bg-white/20 hover:bg-white/30 text-white border-none"
+                        onClick={() => {
+                          const { updateReportShareToken } = useAppStore.getState();
+                          let token = viewingReport.shareToken;
+                          
+                          if (!token) {
+                            token = crypto.randomUUID();
+                            updateReportShareToken(viewingReport.id, token);
+                          }
+                          
+                          const shareUrl = `${window.location.origin}/report/${token}`;
+                          navigator.clipboard.writeText(shareUrl);
+                          setCopiedLink(true);
+                          setTimeout(() => setCopiedLink(false), 2000);
+                          toast.success('Link copied!');
+                        }}
+                      >
+                        {copiedLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copiedLink ? 'Copied!' : 'Copy Link'}
+                      </Button>
+                      <img src={tisaLogo} alt="TISA Logo" className="h-20 w-auto" />
+                    </div>
                   </div>
 
                   <div className="p-6 space-y-6">
@@ -1002,28 +1099,42 @@ export default function ReportsPage() {
                       <div className="bg-tisa-blue text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide">
                         Student Information
                       </div>
-                      <div className="grid grid-cols-2 divide-x divide-border">
-                        <div className="divide-y divide-border">
-                          <div className="flex">
-                            <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Full Name</div>
-                            <div className="px-4 py-2 text-sm font-semibold flex-1">{reportStudent?.firstName} {reportStudent?.lastName}</div>
+                      <div className="flex">
+                        {/* Student Photo */}
+                        {reportStudent?.avatarUrl && (
+                          <div className="p-4 flex items-center justify-center border-r border-border bg-muted/30">
+                            <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-tisa-purple">
+                              <img 
+                                src={reportStudent.avatarUrl} 
+                                alt={`${reportStudent.firstName} ${reportStudent.lastName}`}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
                           </div>
-                          <div className="flex">
-                            <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Name Used</div>
-                            <div className="px-4 py-2 text-sm flex-1">{reportStudent?.nameUsed || '-'}</div>
+                        )}
+                        <div className="flex-1 grid grid-cols-2 divide-x divide-border">
+                          <div className="divide-y divide-border">
+                            <div className="flex">
+                              <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Full Name</div>
+                              <div className="px-4 py-2 text-sm font-semibold flex-1">{reportStudent?.firstName} {reportStudent?.lastName}</div>
+                            </div>
+                            <div className="flex">
+                              <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Name Used</div>
+                              <div className="px-4 py-2 text-sm flex-1">{reportStudent?.nameUsed || '-'}</div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="divide-y divide-border">
-                          <div className="flex">
-                            <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Grade Level</div>
-                            <div className="px-4 py-2 text-sm flex-1">{reportGrade?.name}</div>
-                          </div>
-                          <div className="flex">
-                            <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Date of Birth</div>
-                            <div className="px-4 py-2 text-sm flex-1">
-                              {reportStudent?.dateOfBirth 
-                                ? new Date(reportStudent.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                                : '-'}
+                          <div className="divide-y divide-border">
+                            <div className="flex">
+                              <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Grade Level</div>
+                              <div className="px-4 py-2 text-sm flex-1">{reportGrade?.name}</div>
+                            </div>
+                            <div className="flex">
+                              <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Date of Birth</div>
+                              <div className="px-4 py-2 text-sm flex-1">
+                                {reportStudent?.dateOfBirth 
+                                  ? new Date(reportStudent.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                  : '-'}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1146,47 +1257,73 @@ export default function ReportsPage() {
                       </div>
                     )}
 
-                    {/* Subjects and Assessment Points */}
-                    {reportAssessment?.subjects.map((subject) => {
-                      const subjectEntries = viewingReport.entries.filter((e) => e.subjectId === subject.id);
-                      const subjectComment = viewingReport.subjectComments?.find((c) => c.subjectId === subject.id);
+                    {/* Subjects Filter Toggle */}
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Subject Assessments</h3>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={showCommentsOnly}
+                          onChange={(e) => setShowCommentsOnly(e.target.checked)}
+                          className="rounded border-border"
+                        />
+                        <span className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Filter className="h-3.5 w-3.5" />
+                          Show comments only
+                        </span>
+                      </label>
+                    </div>
 
-                      return (
-                        <div key={subject.id} className="overflow-hidden rounded-lg border border-border">
-                          <div className="bg-tisa-blue text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide flex items-center justify-between">
-                            <span>{subject.name}</span>
-                            {subjectComment?.attitudeTowardsLearning && (
-                              <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
-                                {subjectComment.attitudeTowardsLearning}
-                              </span>
+                    {/* Subjects and Assessment Points */}
+                    {reportAssessment?.subjects
+                      .filter((subject) => {
+                        if (!showCommentsOnly) return true;
+                        const subjectComment = viewingReport.subjectComments?.find((c) => c.subjectId === subject.id);
+                        const hasComment = subjectComment?.teacherComment || subjectComment?.aiRewrittenComment;
+                        const subjectEntries = viewingReport.entries.filter((e) => e.subjectId === subject.id);
+                        const hasTeacherNotes = subjectEntries.some((e) => e.teacherNotes || e.aiRewrittenText);
+                        return hasComment || hasTeacherNotes;
+                      })
+                      .map((subject) => {
+                        const subjectEntries = viewingReport.entries.filter((e) => e.subjectId === subject.id);
+                        const subjectComment = viewingReport.subjectComments?.find((c) => c.subjectId === subject.id);
+
+                        return (
+                          <div key={subject.id} className="overflow-hidden rounded-lg border border-border">
+                            <div className="bg-tisa-blue text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide flex items-center justify-between">
+                              <span>{subject.name}</span>
+                              {subjectComment?.attitudeTowardsLearning && (
+                                <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
+                                  {subjectComment.attitudeTowardsLearning}
+                                </span>
+                              )}
+                            </div>
+                            <div className="divide-y divide-border">
+                              {subject.assessmentPoints.map((point, idx) => {
+                                const entry = subjectEntries.find((e) => e.assessmentPointId === point.id);
+                                return (
+                                  <div 
+                                    key={point.id} 
+                                    className={`flex items-center justify-between px-4 py-2 ${idx % 2 === 0 ? 'bg-card' : 'bg-muted/20'}`}
+                                  >
+                                    <span className="text-sm text-foreground">{point.name}</span>
+                                    <StarRating value={entry?.stars || 0} max={point.maxStars} readonly size="sm" isNA={entry?.isNA} />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {(subjectComment?.teacherComment || subjectComment?.aiRewrittenComment) && (
+                              <div className="border-t border-border bg-muted/30 px-4 py-3">
+                                <div className="flex items-center gap-2 mb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                  <MessageSquare className="h-3 w-3" />
+                                  Teacher Comment
+                                </div>
+                                <p className="text-sm text-foreground">{subjectComment.aiRewrittenComment || subjectComment.teacherComment}</p>
+                              </div>
                             )}
                           </div>
-                          <div className="divide-y divide-border">
-                            {subject.assessmentPoints.map((point, idx) => {
-                              const entry = subjectEntries.find((e) => e.assessmentPointId === point.id);
-                              return (
-                                <div 
-                                  key={point.id} 
-                                  className={`flex items-center justify-between px-4 py-2 ${idx % 2 === 0 ? 'bg-card' : 'bg-muted/20'}`}
-                                >
-                                  <span className="text-sm text-foreground">{point.name}</span>
-                                  <StarRating value={entry?.stars || 0} max={point.maxStars} readonly size="sm" isNA={entry?.isNA} />
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {(subjectComment?.teacherComment || subjectComment?.aiRewrittenComment) && (
-                            <div className="border-t border-border bg-muted/30 px-4 py-3">
-                              <div className="flex items-center gap-2 mb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                <MessageSquare className="h-3 w-3" />
-                                Teacher Comment
-                              </div>
-                              <p className="text-sm text-foreground">{subjectComment.aiRewrittenComment || subjectComment.teacherComment}</p>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
 
                     {/* Tests and Exams Results */}
                     {viewingReport.examResults && viewingReport.examResults.length > 0 && (

@@ -94,28 +94,42 @@ export default function SharedReportPage() {
               <div className="bg-tisa-blue text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide">
                 Student Information
               </div>
-              <div className="grid grid-cols-2 divide-x divide-border">
-                <div className="divide-y divide-border">
-                  <div className="flex">
-                    <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Full Name</div>
-                    <div className="px-4 py-2 text-sm font-semibold flex-1">{student?.firstName} {student?.lastName}</div>
+              <div className="flex">
+                {/* Student Photo */}
+                {student?.avatarUrl && (
+                  <div className="p-4 flex items-center justify-center border-r border-border bg-muted/30">
+                    <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-tisa-purple">
+                      <img 
+                        src={student.avatarUrl} 
+                        alt={`${student.firstName} ${student.lastName}`}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
                   </div>
-                  <div className="flex">
-                    <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Name Used</div>
-                    <div className="px-4 py-2 text-sm flex-1">{student?.nameUsed || '-'}</div>
+                )}
+                <div className="flex-1 grid grid-cols-2 divide-x divide-border">
+                  <div className="divide-y divide-border">
+                    <div className="flex">
+                      <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Full Name</div>
+                      <div className="px-4 py-2 text-sm font-semibold flex-1">{student?.firstName} {student?.lastName}</div>
+                    </div>
+                    <div className="flex">
+                      <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Name Used</div>
+                      <div className="px-4 py-2 text-sm flex-1">{student?.nameUsed || '-'}</div>
+                    </div>
                   </div>
-                </div>
-                <div className="divide-y divide-border">
-                  <div className="flex">
-                    <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Grade Level</div>
-                    <div className="px-4 py-2 text-sm flex-1">{grade?.name}</div>
-                  </div>
-                  <div className="flex">
-                    <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Date of Birth</div>
-                    <div className="px-4 py-2 text-sm flex-1">
-                      {student?.dateOfBirth 
-                        ? new Date(student.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                        : '-'}
+                  <div className="divide-y divide-border">
+                    <div className="flex">
+                      <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Grade Level</div>
+                      <div className="px-4 py-2 text-sm flex-1">{grade?.name}</div>
+                    </div>
+                    <div className="flex">
+                      <div className="bg-muted/50 px-4 py-2 w-32 text-sm font-medium text-muted-foreground">Date of Birth</div>
+                      <div className="px-4 py-2 text-sm flex-1">
+                        {student?.dateOfBirth 
+                          ? new Date(student.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                          : '-'}
+                      </div>
                     </div>
                   </div>
                 </div>
