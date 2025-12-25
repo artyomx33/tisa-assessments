@@ -1129,41 +1129,41 @@ export default function ReportsPage() {
                   <div className="p-8 space-y-8">
                     {/* Student & Teacher Info - Side by Side Cards */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Student Information Card */}
-                      <div className="bg-gradient-to-br from-background to-muted/30 rounded-2xl shadow-lg p-6 border border-border/50 transition-all duration-300 hover:shadow-xl">
-                        <div className="flex items-center gap-3 mb-5">
-                          <div className="p-2.5 bg-tisa-blue/10 rounded-xl">
-                            <User className="h-5 w-5 text-tisa-blue" />
+                      {/* Student Information Card - Horizontal */}
+                      <div className="bg-gradient-to-br from-background to-muted/30 rounded-2xl shadow-lg p-5 border border-border/50 transition-all duration-300 hover:shadow-xl">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-tisa-blue/10 rounded-xl">
+                            <User className="h-4 w-4 text-tisa-blue" />
                           </div>
-                          <h3 className="font-semibold text-lg">Student Information</h3>
+                          <h3 className="font-semibold">Student Information</h3>
                         </div>
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-3">
-                            <UserCircle className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Full Name</p>
-                              <p className="font-semibold">{reportStudent?.firstName} {reportStudent?.lastName}</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="flex items-center gap-2">
+                            <UserCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Full Name</p>
+                              <p className="font-semibold text-sm truncate">{reportStudent?.firstName} {reportStudent?.lastName}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <Sparkles className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Name Used</p>
-                              <p className="font-medium">{reportStudent?.nameUsed || '-'}</p>
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Name Used</p>
+                              <p className="font-medium text-sm truncate">{reportStudent?.nameUsed || '-'}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Grade Level</p>
-                              <p className="font-medium">{reportGrade?.name}</p>
+                          <div className="flex items-center gap-2">
+                            <GraduationCap className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Grade Level</p>
+                              <p className="font-medium text-sm truncate">{reportGrade?.name}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Date of Birth</p>
-                              <p className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Date of Birth</p>
+                              <p className="font-medium text-sm truncate">
                                 {reportStudent?.dateOfBirth 
                                   ? new Date(reportStudent.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
                                   : '-'}
@@ -1228,57 +1228,62 @@ export default function ReportsPage() {
                       )}
                     </div>
 
-                    {/* School Mission, Vision & Values - Quote Style Card */}
-                    {(appSettings.missionStatement || appSettings.vision || appSettings.values.length > 0) && (
-                      <div className="relative bg-gradient-to-br from-tisa-purple/5 via-background to-tisa-blue/5 rounded-2xl shadow-lg p-8 border border-tisa-purple/20 overflow-hidden">
-                        {/* Decorative quote marks */}
-                        <div className="absolute top-4 left-6 text-6xl text-tisa-purple/10 font-serif leading-none">"</div>
-                        <div className="absolute bottom-4 right-6 text-6xl text-tisa-purple/10 font-serif leading-none rotate-180">"</div>
-                        
-                        <div className="relative space-y-6">
-                          {appSettings.missionStatement && (
-                            <div className="text-center max-w-2xl mx-auto">
-                              <h4 className="font-semibold text-tisa-purple text-xs uppercase tracking-widest mb-2 flex items-center justify-center gap-2">
-                                <Target className="h-3.5 w-3.5" />
-                                Our Mission
-                              </h4>
-                              <p className="text-base text-foreground/80 italic leading-relaxed">{appSettings.missionStatement}</p>
-                            </div>
-                          )}
-                          {appSettings.statement && (
-                            <div className="text-center max-w-2xl mx-auto">
-                              <h4 className="font-semibold text-tisa-purple text-xs uppercase tracking-widest mb-2">Statement</h4>
-                              <p className="text-sm text-foreground/80 whitespace-pre-line">{appSettings.statement}</p>
-                            </div>
-                          )}
-                          {appSettings.vision && (
-                            <div className="text-center max-w-2xl mx-auto">
-                              <h4 className="font-semibold text-tisa-blue text-xs uppercase tracking-widest mb-2 flex items-center justify-center gap-2">
-                                <Eye className="h-3.5 w-3.5" />
-                                Our Vision
-                              </h4>
-                              <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{appSettings.vision}</p>
-                            </div>
-                          )}
-                          {appSettings.values.length > 0 && (
-                            <div className="text-center">
-                              <h4 className="font-semibold text-tisa-purple text-xs uppercase tracking-widest mb-3 flex items-center justify-center gap-2">
-                                <Heart className="h-3.5 w-3.5" />
-                                Our Values
-                              </h4>
-                              <div className="flex flex-wrap justify-center gap-2">
-                                {appSettings.values.map((value, i) => (
-                                  <span 
-                                    key={i} 
-                                    className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-tisa-purple to-tisa-blue text-white shadow-md"
-                                  >
-                                    {value}
-                                  </span>
-                                ))}
+                    {/* School Mission, Vision & Values - 2x2 Grid */}
+                    {(appSettings.missionStatement || appSettings.vision || appSettings.statement || appSettings.values.length > 0) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {appSettings.missionStatement && (
+                          <div className="bg-gradient-to-br from-tisa-purple/5 to-background rounded-2xl shadow-lg p-5 border border-tisa-purple/20 transition-all duration-300 hover:shadow-xl">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="p-2 bg-tisa-purple/10 rounded-lg">
+                                <Target className="h-4 w-4 text-tisa-purple" />
                               </div>
+                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide">Our Mission</h4>
                             </div>
-                          )}
-                        </div>
+                            <p className="text-sm text-foreground/80 italic leading-relaxed">{appSettings.missionStatement}</p>
+                          </div>
+                        )}
+                        {appSettings.vision && (
+                          <div className="bg-gradient-to-br from-tisa-blue/5 to-background rounded-2xl shadow-lg p-5 border border-tisa-blue/20 transition-all duration-300 hover:shadow-xl">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="p-2 bg-tisa-blue/10 rounded-lg">
+                                <Eye className="h-4 w-4 text-tisa-blue" />
+                              </div>
+                              <h4 className="font-semibold text-tisa-blue text-sm uppercase tracking-wide">Our Vision</h4>
+                            </div>
+                            <p className="text-sm text-foreground/80 leading-relaxed">{appSettings.vision}</p>
+                          </div>
+                        )}
+                        {appSettings.statement && (
+                          <div className="bg-gradient-to-br from-muted/30 to-background rounded-2xl shadow-lg p-5 border border-border/50 transition-all duration-300 hover:shadow-xl">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="p-2 bg-muted rounded-lg">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <h4 className="font-semibold text-sm uppercase tracking-wide">Statement</h4>
+                            </div>
+                            <p className="text-sm text-foreground/80 whitespace-pre-line">{appSettings.statement}</p>
+                          </div>
+                        )}
+                        {appSettings.values.length > 0 && (
+                          <div className="bg-gradient-to-br from-tisa-purple/5 via-background to-tisa-blue/5 rounded-2xl shadow-lg p-5 border border-tisa-purple/20 transition-all duration-300 hover:shadow-xl">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="p-2 bg-gradient-to-r from-tisa-purple/10 to-tisa-blue/10 rounded-lg">
+                                <Heart className="h-4 w-4 text-tisa-purple" />
+                              </div>
+                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide">Our Values</h4>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {appSettings.values.map((value, i) => (
+                                <span 
+                                  key={i} 
+                                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-tisa-purple to-tisa-blue text-white shadow-sm"
+                                >
+                                  {value}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
