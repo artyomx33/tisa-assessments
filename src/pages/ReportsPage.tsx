@@ -1049,65 +1049,80 @@ export default function ReportsPage() {
               const { appSettings } = useAppStore.getState();
 
               return (
-                <div className="bg-card">
-                  {/* TISA Purple Header Banner - Horizontal Layout */}
-                  <div className="bg-tisa-purple text-white p-4 flex items-center gap-4">
-                    {/* Student Photo in Header */}
-                    <div className="flex-shrink-0">
-                      {reportStudent?.avatarUrl ? (
-                        <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-white shadow-lg">
-                          <img 
-                            src={reportStudent.avatarUrl} 
-                            alt={`${reportStudent.firstName} ${reportStudent.lastName}`}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-16 w-16 rounded-full bg-white/20 border-2 border-white flex items-center justify-center">
-                          <span className="text-lg font-bold text-white">
-                            {reportStudent?.firstName?.[0]}{reportStudent?.lastName?.[0]}
+                <div className="bg-card rounded-2xl overflow-hidden shadow-xl">
+                  {/* Premium Hero Header - Netflix/Apple Style */}
+                  <div className="relative bg-gradient-to-r from-tisa-purple via-purple-600 to-tisa-blue text-white p-8 overflow-hidden">
+                    {/* Background glow effects */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent" />
+                    <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
+                    <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-400/20 rounded-full blur-2xl" />
+                    
+                    <div className="relative flex items-center gap-6">
+                      {/* Student Photo - Larger with glow */}
+                      <div className="flex-shrink-0">
+                        {reportStudent?.avatarUrl ? (
+                          <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-white/90 shadow-2xl ring-4 ring-white/20">
+                            <img 
+                              src={reportStudent.avatarUrl} 
+                              alt={`${reportStudent.firstName} ${reportStudent.lastName}`}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-24 w-24 rounded-full bg-white/20 border-4 border-white/90 flex items-center justify-center shadow-2xl ring-4 ring-white/20 backdrop-blur-sm">
+                            <span className="text-2xl font-bold text-white">
+                              {reportStudent?.firstName?.[0]}{reportStudent?.lastName?.[0]}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Title Section with enhanced typography */}
+                      <div className="text-left flex-1 space-y-2">
+                        <h1 className="font-display text-2xl md:text-3xl font-bold uppercase tracking-wider drop-shadow-lg">
+                          {viewingReport.reportTitle || 'STUDENT PROGRESS REPORT'}
+                        </h1>
+                        <div className="flex items-center gap-3">
+                          <span className="bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-semibold shadow-lg">
+                            {viewingReport.term}
                           </span>
+                          {(viewingReport.periodStart || viewingReport.periodEnd) && (
+                            <span className="text-white/80 text-sm">
+                              {viewingReport.periodStart} — {viewingReport.periodEnd}
+                            </span>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <div className="text-left flex-1">
-                      <h1 className="font-display text-xl font-bold uppercase tracking-widest">
-                        {viewingReport.reportTitle || 'STUDENT PROGRESS REPORT'}
-                      </h1>
-                      <p className="text-white/90 font-medium mt-1">
-                        {viewingReport.term}
-                      </p>
-                      {(viewingReport.periodStart || viewingReport.periodEnd) && (
-                        <p className="text-white/80 text-sm mt-0.5">
-                          Period: {viewingReport.periodStart} - {viewingReport.periodEnd}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <Button 
-                        variant="secondary" 
-                        size="sm" 
-                        className="gap-2 bg-white/20 hover:bg-white/30 text-white border-none"
-                        onClick={() => {
-                          const { updateReportShareToken } = useAppStore.getState();
-                          let token = viewingReport.shareToken;
-                          
-                          if (!token) {
-                            token = crypto.randomUUID();
-                            updateReportShareToken(viewingReport.id, token);
-                          }
-                          
-                          const shareUrl = `${window.location.origin}/report/${token}`;
-                          navigator.clipboard.writeText(shareUrl);
-                          setCopiedLink(true);
-                          setTimeout(() => setCopiedLink(false), 2000);
-                          toast.success('Link copied!');
-                        }}
-                      >
-                        {copiedLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                        {copiedLink ? 'Copied!' : 'Copy Link'}
-                      </Button>
-                      <img src={tisaLogo} alt="TISA Logo" className="h-20 w-auto" />
+                      </div>
+                      
+                      {/* Actions - refined styling */}
+                      <div className="flex items-center gap-4">
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          className="gap-2 bg-white/20 hover:bg-white/30 text-white border border-white/20 backdrop-blur-sm shadow-lg transition-all duration-300 hover:scale-105"
+                          onClick={() => {
+                            const { updateReportShareToken } = useAppStore.getState();
+                            let token = viewingReport.shareToken;
+                            
+                            if (!token) {
+                              token = crypto.randomUUID();
+                              updateReportShareToken(viewingReport.id, token);
+                            }
+                            
+                            const shareUrl = `${window.location.origin}/report/${token}`;
+                            navigator.clipboard.writeText(shareUrl);
+                            setCopiedLink(true);
+                            setTimeout(() => setCopiedLink(false), 2000);
+                            toast.success('Link copied!');
+                          }}
+                        >
+                          {copiedLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                          {copiedLink ? 'Copied!' : 'Copy Link'}
+                        </Button>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2 shadow-lg">
+                          <img src={tisaLogo} alt="TISA Logo" className="h-16 w-auto" />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
