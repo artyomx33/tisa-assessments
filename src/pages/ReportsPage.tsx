@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy, Pencil, Filter, User, UserCircle, GraduationCap, Calendar, Users, Briefcase, Target, Heart, Loader2, Image } from 'lucide-react';
+import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy, Pencil, Filter, User, UserCircle, GraduationCap, Calendar, Users, Briefcase, Target, Heart, Loader2, Image, Wand2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -98,7 +98,8 @@ export default function ReportsPage() {
   const [starFilters, setStarFilters] = useState({ oneStar: false, twoStars: false, threeStars: false, comments: false });
   const [copiedLink, setCopiedLink] = useState(false);
   const [isAILoading, setIsAILoading] = useState<{ [key: string]: boolean }>({});
-
+  const [isRewritingAll, setIsRewritingAll] = useState(false);
+  const [rewriteAllProgress, setRewriteAllProgress] = useState({ current: 0, total: 0 });
   const {
     reports,
     addReport,
@@ -458,6 +459,132 @@ That's the bar.`;
     toast.success('AI comment accepted!');
   };
 
+  // Get student name for AI rewrite
+  const getStudentNameForAI = () => {
+    if (!selectedStudent) return '';
+    return selectedStudent.nameUsed || selectedStudent.firstName;
+  };
+
+  // Get pronouns based on gender
+  const getPronouns = () => {
+    if (!selectedStudent?.gender) return { subject: 'they', object: 'them', possessive: 'their' };
+    if (selectedStudent.gender === 'male') return { subject: 'he', object: 'him', possessive: 'his' };
+    return { subject: 'she', object: 'her', possessive: 'her' };
+  };
+
+  // Rewrite All function
+  const rewriteAll = async () => {
+    if (!selectedStudent || !selectedAssessment) return;
+
+    // Collect all items that need rewriting
+    const itemsToRewrite: Array<{
+      type: 'entry' | 'subjectComment' | 'generalComment';
+      key: string;
+      text: string;
+    }> = [];
+
+    // Collect entries with teacher notes
+    Object.entries(entries).forEach(([key, entry]) => {
+      if (entry.teacherNotes?.trim()) {
+        itemsToRewrite.push({ type: 'entry', key, text: entry.teacherNotes });
+      }
+    });
+
+    // Collect subject comments
+    Object.entries(subjectComments).forEach(([subjectId, comment]) => {
+      if (comment.teacherComment?.trim()) {
+        itemsToRewrite.push({ type: 'subjectComment', key: subjectId, text: comment.teacherComment });
+      }
+    });
+
+    // Collect general comment
+    if (generalComment?.trim()) {
+      itemsToRewrite.push({ type: 'generalComment', key: 'general', text: generalComment });
+    }
+
+    if (itemsToRewrite.length === 0) {
+      toast.error('No comments to rewrite. Add some teacher notes first.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Rewrite ${itemsToRewrite.length} comment${itemsToRewrite.length > 1 ? 's' : ''} with TISA style?\n\nThis will process all teacher notes using the TISA style guide.`
+    );
+
+    if (!confirmed) return;
+
+    setIsRewritingAll(true);
+    setRewriteAllProgress({ current: 0, total: itemsToRewrite.length });
+
+    const studentName = getStudentNameForAI();
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < itemsToRewrite.length; i++) {
+      const item = itemsToRewrite[i];
+      setRewriteAllProgress({ current: i + 1, total: itemsToRewrite.length });
+
+      try {
+        const provider = appSettings.aiProvider || 'lovable';
+        let customApiKey = '';
+        if (provider === 'openai') customApiKey = appSettings.openaiApiKey || '';
+        else if (provider === 'google') customApiKey = appSettings.googleApiKey || '';
+        else if (provider === 'anthropic') customApiKey = appSettings.anthropicApiKey || '';
+
+        if (provider !== 'lovable' && !customApiKey) {
+          toast.error(`Please add your ${provider} API key in Settings`);
+          break;
+        }
+
+        const { data, error } = await supabase.functions.invoke('ai-rewrite', {
+          body: {
+            text: item.text,
+            styleGuide: TISA_STYLE_GUIDE,
+            studentName,
+            provider,
+            customApiKey: customApiKey || undefined,
+          },
+        });
+
+        if (error || data?.error) {
+          errorCount++;
+          continue;
+        }
+
+        if (data?.rewrittenText) {
+          // Apply the rewritten text based on type
+          if (item.type === 'entry') {
+            const [subjectId, pointId] = item.key.split(':');
+            updateEntry(subjectId, pointId, 'teacherNotes', data.rewrittenText);
+          } else if (item.type === 'subjectComment') {
+            updateSubjectComment(item.key, 'teacherComment', data.rewrittenText);
+          } else if (item.type === 'generalComment') {
+            setGeneralComment(data.rewrittenText);
+          }
+          successCount++;
+        }
+
+        // Small delay between requests to avoid rate limits
+        if (i < itemsToRewrite.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      } catch (err) {
+        console.error('Rewrite error:', err);
+        errorCount++;
+      }
+    }
+
+    setIsRewritingAll(false);
+    setRewriteAllProgress({ current: 0, total: 0 });
+
+    if (successCount > 0) {
+      toast.success(`Rewrote ${successCount} comment${successCount > 1 ? 's' : ''} with TISA style!`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to rewrite ${errorCount} comment${errorCount > 1 ? 's' : ''}`);
+    }
+  };
+
   const onSubmit = (data: ReportFormValues) => {
     // Convert entries to array format
     const entryArray: ReportEntry[] = Object.entries(entries).map(([key, value]) => {
@@ -734,7 +861,29 @@ That's the bar.`;
                   {/* Assessment Subjects & Points */}
                   {selectedAssessment && hasEntries && (
                     <div className="space-y-4">
-                      <h3 className="font-display font-semibold">Assessment Subjects</h3>
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-display font-semibold">Assessment Subjects</h3>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 border-tisa-purple/30 hover:bg-tisa-purple/10"
+                          onClick={rewriteAll}
+                          disabled={isRewritingAll}
+                        >
+                          {isRewritingAll ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Rewriting {rewriteAllProgress.current}/{rewriteAllProgress.total}...
+                            </>
+                          ) : (
+                            <>
+                              <Wand2 className="h-4 w-4 text-tisa-purple" />
+                              Rewrite All (TISA)
+                            </>
+                          )}
+                        </Button>
+                      </div>
                       {selectedAssessment.subjects?.map((subject) => (
                         <Collapsible
                           key={subject.id}

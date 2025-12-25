@@ -77,6 +77,7 @@ export const studentSchema = z.object({
   gradeId: z.string(),
   schoolYearId: z.string(),
   avatarUrl: z.string().optional(),
+  gender: z.enum(['male', 'female']).optional(),
 });
 
 export type Student = z.infer<typeof studentSchema>;
