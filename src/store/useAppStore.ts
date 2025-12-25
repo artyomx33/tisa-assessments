@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { SchoolYear, Grade, AssessmentTemplate, Student, StudentReport, AssessmentPoint, AppSettings, TeacherAssignment, ExamResult, ReportReflection, ReportSignature } from '@/types';
+import type { SchoolYear, Grade, AssessmentTemplate, Student, StudentReport, AssessmentPoint, AppSettings, TeacherAssignment, ExamResult, ReportReflection, ReportSignature, StudentDocument } from '@/types';
 
 interface AppState {
   // School Years
@@ -41,6 +41,14 @@ interface AppState {
   deleteExamResult: (reportId: string, examResultId: string) => void;
   updateReportReflection: (reportId: string, reflection: Partial<ReportReflection>) => void;
   signReport: (reportId: string, role: 'classroomTeacher' | 'headOfSchool', name: string) => void;
+
+  // Documents (Work Samples)
+  documents: StudentDocument[];
+  addDocument: (doc: StudentDocument) => void;
+  updateDocument: (id: string, updates: Partial<StudentDocument>) => void;
+  deleteDocument: (id: string) => void;
+  getReportDocuments: (reportId: string) => StudentDocument[];
+  getStudentGeneralDocuments: (studentId: string) => StudentDocument[];
 
   // App Settings
   appSettings: AppSettings;
@@ -685,6 +693,34 @@ export const useAppStore = create<AppState>()(
               : r
           ),
         })),
+
+      // Documents (Work Samples)
+      documents: [],
+
+      addDocument: (doc) =>
+        set((state) => ({
+          documents: [...state.documents, doc],
+        })),
+
+      updateDocument: (id, updates) =>
+        set((state) => ({
+          documents: state.documents.map((d) =>
+            d.id === id ? { ...d, ...updates } : d
+          ),
+        })),
+
+      deleteDocument: (id) =>
+        set((state) => ({
+          documents: state.documents.filter((d) => d.id !== id),
+        })),
+
+      getReportDocuments: (reportId) => {
+        return get().documents.filter((d) => d.type === 'report' && d.reportId === reportId);
+      },
+
+      getStudentGeneralDocuments: (studentId) => {
+        return get().documents.filter((d) => d.type === 'general' && d.studentId === studentId);
+      },
 
       // App Settings
       appSettings: defaultAppSettings,
