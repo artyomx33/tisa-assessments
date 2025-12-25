@@ -3,11 +3,14 @@ import { useAppStore } from '@/store/useAppStore';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Star, FileText } from 'lucide-react';
+import { ExamResultsDisplay } from '@/components/reports/ExamResultsDisplay';
+import { SignatureDisplay } from '@/components/reports/SignatureDisplay';
+import { ReflectionsSection } from '@/components/reports/ReflectionsSection';
 import tisaLogo from '@/assets/tisa_logo.png';
 
 export default function SharedReportPage() {
   const { shareToken } = useParams<{ shareToken: string }>();
-  const { reports, students, assessmentTemplates, grades, appSettings } = useAppStore();
+  const { reports, students, assessmentTemplates, grades, appSettings, updateReportReflection } = useAppStore();
 
   // Find the report by share token
   const report = reports.find((r) => r.shareToken === shareToken);
@@ -52,6 +55,10 @@ export default function SharedReportPage() {
     );
   };
 
+  const handleUpdateReflection = (reflection: Parameters<typeof updateReportReflection>[1]) => {
+    updateReportReflection(report.id, reflection);
+  };
+
   return (
     <div className="min-h-screen bg-muted/30">
       <div className="max-w-4xl mx-auto">
@@ -63,7 +70,7 @@ export default function SharedReportPage() {
         </div>
 
         <div className="bg-card shadow-lg">
-          {/* TISA Purple Header Banner - Horizontal Layout */}
+          {/* TISA Purple Header Banner */}
           <div className="bg-tisa-purple text-white p-4 flex items-center justify-between">
             <div className="text-left">
               <h1 className="font-display text-xl font-bold uppercase tracking-widest">
@@ -122,7 +129,6 @@ export default function SharedReportPage() {
                   Teacher Information
                 </div>
                 <div className="divide-y divide-border">
-                  {/* Core Programme */}
                   {grade.teacherAssignments && grade.teacherAssignments.filter(a => a.category === 'core').length > 0 && (
                     <div className="grid grid-cols-[140px_1fr_1fr] text-sm">
                       <div className="bg-tisa-purple/10 px-4 py-2 font-semibold text-tisa-purple row-span-99 flex items-center border-r border-border">
@@ -138,7 +144,6 @@ export default function SharedReportPage() {
                       </div>
                     </div>
                   )}
-                  {/* Professional Tracks */}
                   {grade.teacherAssignments && grade.teacherAssignments.filter(a => a.category === 'professional').length > 0 && (
                     <div className="grid grid-cols-[140px_1fr_1fr] text-sm">
                       <div className="bg-tisa-purple/10 px-4 py-2 font-semibold text-tisa-purple row-span-99 flex items-center border-r border-border">
@@ -201,6 +206,11 @@ export default function SharedReportPage() {
               </div>
             </div>
 
+            {/* Tests and Exams Results */}
+            {report.examResults && report.examResults.length > 0 && (
+              <ExamResultsDisplay examResults={report.examResults} />
+            )}
+
             {/* Subject Assessments */}
             {assessment?.subjects.map((subject) => {
               const subjectEntries = report.entries.filter((e) => e.subjectId === subject.id);
@@ -219,7 +229,6 @@ export default function SharedReportPage() {
                     )}
                   </div>
                   <div className="divide-y divide-border">
-                    {/* Assessment Points */}
                     {subjectEntries.map((entry) => {
                       const point = subject.assessmentPoints.find((p) => p.id === entry.assessmentPointId);
                       if (!point) return null;
@@ -232,7 +241,6 @@ export default function SharedReportPage() {
                       );
                     })}
                     
-                    {/* Subject Comment */}
                     {(subjectComment?.aiRewrittenComment || subjectComment?.teacherComment) && (
                       <div className="p-4 bg-muted/30">
                         <p className="text-sm text-muted-foreground leading-relaxed">
@@ -256,6 +264,20 @@ export default function SharedReportPage() {
                 </div>
               </div>
             )}
+
+            {/* Reflections (Editable by parents/students) */}
+            <ReflectionsSection
+              reflections={report.reflections}
+              onUpdate={handleUpdateReflection}
+              isSharedView={true}
+            />
+
+            {/* Signatures */}
+            <SignatureDisplay
+              signatures={report.signatures}
+              classroomTeacherName={grade?.classroomTeacher}
+              headOfSchoolName="Karina Medvedeva"
+            />
 
             {/* Footer */}
             <div className="border-t border-border pt-4 text-xs text-muted-foreground flex items-center justify-between">
