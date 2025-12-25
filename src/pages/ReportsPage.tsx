@@ -1188,6 +1188,11 @@ export default function ReportsPage() {
                       );
                     })}
 
+                    {/* Tests and Exams Results */}
+                    {viewingReport.examResults && viewingReport.examResults.length > 0 && (
+                      <ExamResultsDisplay examResults={viewingReport.examResults} />
+                    )}
+
                     {/* General Comment */}
                     {viewingReport.generalComment && (
                       <div className="overflow-hidden rounded-lg border border-border">
@@ -1199,6 +1204,18 @@ export default function ReportsPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Signatures */}
+                    <SignatureDisplay
+                      signatures={viewingReport.signatures}
+                      classroomTeacherName={(() => {
+                        const { grades, students } = useAppStore.getState();
+                        const student = students.find(s => s.id === viewingReport.studentId);
+                        const grade = grades.find(g => g.id === student?.gradeId);
+                        return grade?.classroomTeacher || '';
+                      })()}
+                      headOfSchoolName="Karina Medvedeva"
+                    />
 
                     {/* Footer */}
                     <div className="border-t border-border pt-4 text-xs text-muted-foreground flex items-center justify-between">
