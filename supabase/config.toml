@@ -1,0 +1,4 @@
+project_id = "yianjkyvljjmwotgzgnf"
+
+[functions.ai-rewrite]
+verify_jwt = false

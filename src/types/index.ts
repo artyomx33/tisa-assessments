@@ -174,6 +174,11 @@ export const appSettingsSchema = z.object({
   values: z.array(z.string()).default([]),
   gradingKey: z.string().default(''),
   companyWritingStyle: z.string().default(''),
+  // AI Provider Settings
+  aiProvider: z.enum(['lovable', 'openai', 'google', 'anthropic']).default('lovable'),
+  openaiApiKey: z.string().default(''),
+  googleApiKey: z.string().default(''),
+  anthropicApiKey: z.string().default(''),
 });
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;

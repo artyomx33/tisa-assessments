@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy, Pencil, Filter, User, UserCircle, GraduationCap, Calendar, Users, Briefcase, Target, Heart } from 'lucide-react';
+import { Plus, FileText, ChevronRight, ChevronDown, Sparkles, Save, Eye, BookOpen, MessageSquare, Star, Link, Check, Copy, Pencil, Filter, User, UserCircle, GraduationCap, Calendar, Users, Briefcase, Target, Heart, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useAppStore } from '@/store/useAppStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -94,7 +95,7 @@ export default function ReportsPage() {
   const [signatures, setSignatures] = useState<ReportSignature>({});
   const [starFilters, setStarFilters] = useState({ oneStar: false, twoStars: false, threeStars: false, comments: false });
   const [copiedLink, setCopiedLink] = useState(false);
-  const [valuesViewMode, setValuesViewMode] = useState<'pills' | 'list'>('pills');
+  const [isAILoading, setIsAILoading] = useState<{ [key: string]: boolean }>({});
 
   const {
     reports,
@@ -284,51 +285,82 @@ export default function ReportsPage() {
   };
 
 
-  const simulateAIRewrite = (text: string, callback: (rewritten: string) => void) => {
+  const callAIRewrite = async (text: string, loadingKey: string, callback: (rewritten: string) => void) => {
     if (!text.trim()) {
       toast.error('Please enter some text first');
       return;
     }
 
-    // Get the writing style guide from app settings
-    const styleGuide = appSettings.companyWritingStyle;
-    
-    // Build AI-polished text using the style guide
-    let polishedText = text.charAt(0).toUpperCase() + text.slice(1);
-    
-    if (styleGuide) {
-      // Apply style guide principles to the rewrite
-      // This is a simulation - in production, this would call an AI API with the style guide as system prompt
-      const styleNotes = styleGuide.toLowerCase();
-      
-      // Add encouraging language if style guide mentions it
-      if (styleNotes.includes('encouraging') || styleNotes.includes('positive')) {
-        polishedText += '. The student shows wonderful progress and enthusiasm in this area.';
+    setIsAILoading(prev => ({ ...prev, [loadingKey]: true }));
+
+    try {
+      // Determine which API key to use based on provider
+      let customApiKey = '';
+      if (appSettings.aiProvider === 'openai') {
+        customApiKey = appSettings.openaiApiKey;
+      } else if (appSettings.aiProvider === 'google') {
+        customApiKey = appSettings.googleApiKey;
+      } else if (appSettings.aiProvider === 'anthropic') {
+        customApiKey = appSettings.anthropicApiKey;
       }
-      
-      // Add growth mindset language if mentioned
-      if (styleNotes.includes('growth') || styleNotes.includes('develop')) {
-        polishedText += ' We are excited to see continued development and look forward to celebrating future achievements.';
+
+      // Check if custom provider is selected but no API key provided
+      if (appSettings.aiProvider !== 'lovable' && !customApiKey) {
+        toast.error(`Please add your ${appSettings.aiProvider} API key in Settings`);
+        setIsAILoading(prev => ({ ...prev, [loadingKey]: false }));
+        return;
       }
-      
-      // Add parent engagement if mentioned
-      if (styleNotes.includes('parent') || styleNotes.includes('home')) {
-        polishedText += ' We encourage continued practice and engagement at home to reinforce these skills.';
+
+      const { data, error } = await supabase.functions.invoke('ai-rewrite', {
+        body: {
+          text,
+          styleGuide: appSettings.companyWritingStyle,
+          provider: appSettings.aiProvider,
+          customApiKey: customApiKey || undefined,
+        },
+      });
+
+      if (error) {
+        console.error('AI rewrite error:', error);
+        toast.error('Failed to rewrite text. Please try again.');
+        return;
       }
-      
-      // If no specific matches, add a general professional polish
-      if (!polishedText.includes('.')) {
-        polishedText += '. The student demonstrates consistent effort and maintains a positive attitude towards learning.';
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
       }
-      
-      toast.success('Text polished using your style guide!');
-    } else {
-      // Default polish without style guide
-      polishedText += '. The student demonstrates consistent effort and maintains a positive attitude towards learning. We encourage continued practice at home to further develop these skills.';
-      toast.info('Text polished! Tip: Add a writing style guide in Settings for personalized AI rewrites.');
+
+      if (data?.rewrittenText) {
+        callback(data.rewrittenText);
+        toast.success('Text rewritten by AI!');
+      }
+    } catch (err) {
+      console.error('AI rewrite error:', err);
+      toast.error('Failed to connect to AI. Please try again.');
+    } finally {
+      setIsAILoading(prev => ({ ...prev, [loadingKey]: false }));
     }
-    
-    callback(polishedText);
+  };
+
+  const acceptAIRewrite = (key: string, aiText: string) => {
+    // Replace the teacher notes with the AI rewritten version
+    const [subjectId, pointId] = key.split(':');
+    updateEntry(subjectId, pointId, 'teacherNotes', aiText);
+    updateEntry(subjectId, pointId, 'aiRewrittenText', ''); // Clear AI field after accepting
+    toast.success('AI text accepted!');
+  };
+
+  const acceptSubjectAIComment = (subjectId: string, aiText: string) => {
+    updateSubjectComment(subjectId, 'teacherComment', aiText);
+    updateSubjectComment(subjectId, 'aiRewrittenComment', ''); // Clear AI field after accepting
+    toast.success('AI comment accepted!');
+  };
+
+  const acceptGeneralAIComment = () => {
+    setGeneralComment(generalCommentAI);
+    setGeneralCommentAI(''); // Clear AI field after accepting
+    toast.success('AI comment accepted!');
   };
 
   const onSubmit = (data: ReportFormValues) => {
@@ -687,13 +719,19 @@ export default function ReportsPage() {
                                               variant="outline"
                                               size="sm"
                                               className="gap-2"
-                                              onClick={() => simulateAIRewrite(
+                                              disabled={isAILoading[key]}
+                                              onClick={() => callAIRewrite(
                                                 entry.teacherNotes,
+                                                key,
                                                 (rewritten) => updateEntry(subject.id, point.id, 'aiRewrittenText', rewritten)
                                               )}
                                             >
-                                              <Sparkles className="h-3.5 w-3.5 text-accent" />
-                                              AI Rewrite
+                                              {isAILoading[key] ? (
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                              ) : (
+                                                <Sparkles className="h-3.5 w-3.5 text-accent" />
+                                              )}
+                                              {isAILoading[key] ? 'Rewriting...' : 'AI Rewrite'}
                                             </Button>
                                           </div>
                                         )}
@@ -702,6 +740,7 @@ export default function ReportsPage() {
                                           <motion.div
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: 'auto' }}
+                                            className="space-y-2"
                                           >
                                             <label className="mb-1.5 flex items-center gap-2 text-sm">
                                               <Sparkles className="h-3.5 w-3.5 text-accent" />
@@ -712,6 +751,16 @@ export default function ReportsPage() {
                                               value={entry.aiRewrittenText}
                                               onChange={(e) => updateEntry(subject.id, point.id, 'aiRewrittenText', e.target.value)}
                                             />
+                                            <Button
+                                              type="button"
+                                              variant="default"
+                                              size="sm"
+                                              className="gap-2"
+                                              onClick={() => acceptAIRewrite(key, entry.aiRewrittenText)}
+                                            >
+                                              <Check className="h-3.5 w-3.5" />
+                                              Accept AI Version
+                                            </Button>
                                           </motion.div>
                                         )}
                                       </CardContent>
@@ -799,23 +848,41 @@ export default function ReportsPage() {
                                         variant="outline"
                                         size="sm"
                                         className="gap-2"
-                                        onClick={() => simulateAIRewrite(
+                                        disabled={isAILoading[`subject-${subject.id}`]}
+                                        onClick={() => callAIRewrite(
                                           subjectComments[subject.id].teacherComment,
+                                          `subject-${subject.id}`,
                                           (rewritten) => updateSubjectComment(subject.id, 'aiRewrittenComment', rewritten)
                                         )}
                                       >
-                                        <Sparkles className="h-3.5 w-3.5 text-accent" />
-                                        AI Rewrite
+                                        {isAILoading[`subject-${subject.id}`] ? (
+                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        ) : (
+                                          <Sparkles className="h-3.5 w-3.5 text-accent" />
+                                        )}
+                                        {isAILoading[`subject-${subject.id}`] ? 'Rewriting...' : 'AI Rewrite'}
                                       </Button>
                                     </div>
                                   )}
 
                                   {subjectComments[subject.id]?.aiRewrittenComment && (
-                                    <Textarea
-                                      className="min-h-[80px] bg-accent/5 border-accent/20"
-                                      value={subjectComments[subject.id].aiRewrittenComment}
-                                      onChange={(e) => updateSubjectComment(subject.id, 'aiRewrittenComment', e.target.value)}
-                                    />
+                                    <div className="space-y-2">
+                                      <Textarea
+                                        className="min-h-[80px] bg-accent/5 border-accent/20"
+                                        value={subjectComments[subject.id].aiRewrittenComment}
+                                        onChange={(e) => updateSubjectComment(subject.id, 'aiRewrittenComment', e.target.value)}
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="default"
+                                        size="sm"
+                                        className="gap-2"
+                                        onClick={() => acceptSubjectAIComment(subject.id, subjectComments[subject.id].aiRewrittenComment)}
+                                      >
+                                        <Check className="h-3.5 w-3.5" />
+                                        Accept AI Version
+                                      </Button>
+                                    </div>
                                   )}
                                 </CardContent>
                               </Card>
@@ -884,10 +951,15 @@ export default function ReportsPage() {
                                 variant="outline"
                                 size="sm"
                                 className="gap-2"
-                                onClick={() => simulateAIRewrite(generalComment, setGeneralCommentAI)}
+                                disabled={isAILoading['general']}
+                                onClick={() => callAIRewrite(generalComment, 'general', setGeneralCommentAI)}
                               >
-                                <Sparkles className="h-3.5 w-3.5 text-accent" />
-                                AI Rewrite
+                                {isAILoading['general'] ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Sparkles className="h-3.5 w-3.5 text-accent" />
+                                )}
+                                {isAILoading['general'] ? 'Rewriting...' : 'AI Rewrite'}
                               </Button>
                             </div>
                           )}
@@ -896,6 +968,7 @@ export default function ReportsPage() {
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
+                              className="space-y-2"
                             >
                               <label className="mb-1.5 flex items-center gap-2 text-sm">
                                 <Sparkles className="h-3.5 w-3.5 text-accent" />
@@ -906,6 +979,16 @@ export default function ReportsPage() {
                                 value={generalCommentAI}
                                 onChange={(e) => setGeneralCommentAI(e.target.value)}
                               />
+                              <Button
+                                type="button"
+                                variant="default"
+                                size="sm"
+                                className="gap-2"
+                                onClick={acceptGeneralAIComment}
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                                Accept AI Version
+                              </Button>
                             </motion.div>
                           )}
                         </CardContent>
@@ -1052,11 +1135,11 @@ export default function ReportsPage() {
               return (
                 <div className="bg-card rounded-2xl overflow-hidden shadow-xl">
                   {/* Premium Hero Header - Netflix/Apple Style */}
-                  <div className="relative bg-gradient-to-r from-tisa-purple via-purple-600 to-tisa-blue text-white p-8 overflow-hidden">
+                  <div className="relative bg-gradient-to-r from-tisa-purple via-tisa-purple/80 to-tisa-blue p-8 overflow-hidden">
                     {/* Background glow effects */}
                     <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent" />
                     <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
-                    <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-400/20 rounded-full blur-2xl" />
+                    <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-tisa-purple/30 rounded-full blur-2xl" />
                     
                     <div className="relative flex items-center gap-6">
                       {/* Student Photo - Larger with glow */}
@@ -1080,7 +1163,7 @@ export default function ReportsPage() {
                       
                       {/* Title Section with enhanced typography */}
                       <div className="text-left flex-1 space-y-2">
-                        <h1 className="font-display text-2xl md:text-3xl font-bold uppercase tracking-wider drop-shadow-lg">
+                        <h1 className="font-display text-2xl md:text-3xl font-bold uppercase tracking-wider text-white drop-shadow-lg">
                           {viewingReport.reportTitle || 'STUDENT PROGRESS REPORT'}
                         </h1>
                         <div className="flex items-center gap-3">
@@ -1276,46 +1359,22 @@ export default function ReportsPage() {
                         )}
                         {appSettings.values.length > 0 && (
                           <div className="bg-gradient-to-br from-tisa-purple/5 via-background to-tisa-blue/5 rounded-2xl shadow-lg p-5 border border-tisa-purple/20 transition-all duration-300 hover:shadow-xl">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <div className="p-2 bg-gradient-to-r from-tisa-purple/10 to-tisa-blue/10 rounded-lg">
-                                  <Heart className="h-4 w-4 text-tisa-purple" />
-                                </div>
-                                <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide">Our Values</h4>
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="p-2 bg-gradient-to-r from-tisa-purple/10 to-tisa-blue/10 rounded-lg">
+                                <Heart className="h-4 w-4 text-tisa-purple" />
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setValuesViewMode(prev => prev === 'pills' ? 'list' : 'pills')}
-                                className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                              >
-                                {valuesViewMode === 'pills' ? 'Try List View' : 'Try Pills View'}
-                              </Button>
+                              <h4 className="font-semibold text-tisa-purple text-sm uppercase tracking-wide">Our Values</h4>
                             </div>
-                            {valuesViewMode === 'pills' ? (
-                              <div className="flex flex-wrap justify-center gap-4">
-                                {appSettings.values.map((value, i) => (
-                                  <span 
-                                    key={i} 
-                                    className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-tisa-purple to-tisa-blue text-white shadow-sm transition-transform duration-200 hover:scale-105"
-                                  >
-                                    {value}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                {appSettings.values.map((value, i) => (
-                                  <div 
-                                    key={i} 
-                                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-tisa-purple/5 transition-colors"
-                                  >
-                                    <Sparkles className="h-4 w-4 text-tisa-purple flex-shrink-0" />
-                                    <span className="text-sm font-medium text-foreground/90">{value}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                            <div className="flex flex-wrap justify-center gap-4">
+                              {appSettings.values.map((value, i) => (
+                                <span 
+                                  key={i} 
+                                  className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-tisa-purple to-tisa-blue text-white shadow-sm transition-transform duration-200 hover:scale-105"
+                                >
+                                  {value}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
