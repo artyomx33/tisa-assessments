@@ -203,3 +203,17 @@ export const studentDocumentSchema = z.object({
 });
 
 export type StudentDocument = z.infer<typeof studentDocumentSchema>;
+
+// Hardcoded document slots for General Documents tab
+export const GENERAL_DOC_SLOTS = [
+  { id: 'enrollment_form', label: 'Enrollment Form', required: true },
+  { id: 'birth_certificate', label: 'Birth Certificate', required: false },
+  { id: 'medical_certificate', label: 'Medical Certificate', required: false },
+  { id: 'id_passport', label: 'ID/Passport Copy', required: false },
+  { id: 'permission_slip', label: 'Permission Slip', required: false },
+  { id: 'emergency_contact', label: 'Emergency Contact Form', required: false },
+  { id: 'previous_report', label: 'Previous Report Card', required: false },
+  { id: 'other', label: 'Other', required: false },
+] as const;
+
+export type GeneralDocSlot = typeof GENERAL_DOC_SLOTS[number];
