@@ -45,6 +45,7 @@ import { ExamResultsSection } from '@/components/reports/ExamResultsSection';
 import { SignatureSection } from '@/components/reports/SignatureSection';
 import { ExamResultsDisplay } from '@/components/reports/ExamResultsDisplay';
 import { SignatureDisplay } from '@/components/reports/SignatureDisplay';
+import { AIRewriteButtons } from '@/components/reports/AIRewriteButtons';
 import { toast } from 'sonner';
 import type { StudentReport, ReportEntry, SubjectComment, ExamResult, ReportSignature } from '@/types';
 import tisaLogo from '@/assets/tisa_logo.png';
@@ -800,80 +801,17 @@ That's the bar.`;
                                           />
                                         </div>
 
-                                        {entry?.teacherNotes && (
-                                          <div className="flex items-center gap-2">
-                                            <Button
-                                              type="button"
-                                              variant="outline"
-                                              size="sm"
-                                              className="gap-2"
-                                              disabled={isAILoading[key] || isAILoading[`${key}-tisa`]}
-                                              onClick={() => callAIRewrite(
-                                                entry.teacherNotes,
-                                                key,
-                                                (rewritten) => updateEntry(subject.id, point.id, 'aiRewrittenText', rewritten),
-                                                'quick',
-                                                selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'
-                                              )}
-                                            >
-                                              {isAILoading[key] ? (
-                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                              ) : (
-                                                <Sparkles className="h-3.5 w-3.5 text-accent" />
-                                              )}
-                                              {isAILoading[key] ? 'Rewriting...' : 'Quick'}
-                                            </Button>
-                                            <Button
-                                              type="button"
-                                              variant="outline"
-                                              size="sm"
-                                              className="gap-2 border-tisa-purple/30 hover:bg-tisa-purple/10"
-                                              disabled={isAILoading[key] || isAILoading[`${key}-tisa`]}
-                                              onClick={() => callAIRewrite(
-                                                entry.teacherNotes,
-                                                `${key}-tisa`,
-                                                (rewritten) => updateEntry(subject.id, point.id, 'aiRewrittenText', rewritten),
-                                                'tisa',
-                                                selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'
-                                              )}
-                                            >
-                                              {isAILoading[`${key}-tisa`] ? (
-                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                              ) : (
-                                                <Star className="h-3.5 w-3.5 text-tisa-purple" />
-                                              )}
-                                              {isAILoading[`${key}-tisa`] ? 'Rewriting...' : 'TISA'}
-                                            </Button>
-                                          </div>
-                                        )}
-
-                                        {entry?.aiRewrittenText && (
-                                          <motion.div
-                                            initial={{ opacity: 0, height: 0 }}
-                                            animate={{ opacity: 1, height: 'auto' }}
-                                            className="space-y-2"
-                                          >
-                                            <label className="mb-1.5 flex items-center gap-2 text-sm">
-                                              <Sparkles className="h-3.5 w-3.5 text-accent" />
-                                              AI Polished
-                                            </label>
-                                            <Textarea
-                                              className="min-h-[60px] bg-accent/5 border-accent/20"
-                                              value={entry.aiRewrittenText}
-                                              onChange={(e) => updateEntry(subject.id, point.id, 'aiRewrittenText', e.target.value)}
-                                            />
-                                            <Button
-                                              type="button"
-                                              variant="default"
-                                              size="sm"
-                                              className="gap-2"
-                                              onClick={() => acceptAIRewrite(key, entry.aiRewrittenText)}
-                                            >
-                                              <Check className="h-3.5 w-3.5" />
-                                              Accept AI Version
-                                            </Button>
-                                          </motion.div>
-                                        )}
+                                        <AIRewriteButtons
+                                          sourceText={entry?.teacherNotes || ''}
+                                          aiRewrittenText={entry?.aiRewrittenText || ''}
+                                          loadingKey={key}
+                                          studentName={selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'}
+                                          onRewrite={callAIRewrite}
+                                          onRewriteComplete={(result) => updateEntry(subject.id, point.id, 'aiRewrittenText', result)}
+                                          onAccept={() => acceptAIRewrite(key, entry?.aiRewrittenText || '')}
+                                          isLoading={isAILoading}
+                                          onAITextChange={(text) => updateEntry(subject.id, point.id, 'aiRewrittenText', text)}
+                                        />
                                       </CardContent>
                                     </Card>
                                   </motion.div>
@@ -952,72 +890,18 @@ That's the bar.`;
                                     onChange={(e) => updateSubjectComment(subject.id, 'teacherComment', e.target.value)}
                                   />
 
-                                  {subjectComments[subject.id]?.teacherComment && (
-                                    <div className="flex items-center gap-2">
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-2"
-                                        disabled={isAILoading[`subject-${subject.id}`] || isAILoading[`subject-${subject.id}-tisa`]}
-                                        onClick={() => callAIRewrite(
-                                          subjectComments[subject.id].teacherComment,
-                                          `subject-${subject.id}`,
-                                          (rewritten) => updateSubjectComment(subject.id, 'aiRewrittenComment', rewritten),
-                                          'quick',
-                                          selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'
-                                        )}
-                                      >
-                                        {isAILoading[`subject-${subject.id}`] ? (
-                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                        ) : (
-                                          <Sparkles className="h-3.5 w-3.5 text-accent" />
-                                        )}
-                                        {isAILoading[`subject-${subject.id}`] ? 'Rewriting...' : 'Quick'}
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-2 border-tisa-purple/30 hover:bg-tisa-purple/10"
-                                        disabled={isAILoading[`subject-${subject.id}`] || isAILoading[`subject-${subject.id}-tisa`]}
-                                        onClick={() => callAIRewrite(
-                                          subjectComments[subject.id].teacherComment,
-                                          `subject-${subject.id}-tisa`,
-                                          (rewritten) => updateSubjectComment(subject.id, 'aiRewrittenComment', rewritten),
-                                          'tisa',
-                                          selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'
-                                        )}
-                                      >
-                                        {isAILoading[`subject-${subject.id}-tisa`] ? (
-                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                        ) : (
-                                          <Star className="h-3.5 w-3.5 text-tisa-purple" />
-                                        )}
-                                        {isAILoading[`subject-${subject.id}-tisa`] ? 'Rewriting...' : 'TISA'}
-                                      </Button>
-                                    </div>
-                                  )}
-
-                                  {subjectComments[subject.id]?.aiRewrittenComment && (
-                                    <div className="space-y-2">
-                                      <Textarea
-                                        className="min-h-[80px] bg-accent/5 border-accent/20"
-                                        value={subjectComments[subject.id].aiRewrittenComment}
-                                        onChange={(e) => updateSubjectComment(subject.id, 'aiRewrittenComment', e.target.value)}
-                                      />
-                                      <Button
-                                        type="button"
-                                        variant="default"
-                                        size="sm"
-                                        className="gap-2"
-                                        onClick={() => acceptSubjectAIComment(subject.id, subjectComments[subject.id].aiRewrittenComment)}
-                                      >
-                                        <Check className="h-3.5 w-3.5" />
-                                        Accept AI Version
-                                      </Button>
-                                    </div>
-                                  )}
+                                  <AIRewriteButtons
+                                    sourceText={subjectComments[subject.id]?.teacherComment || ''}
+                                    aiRewrittenText={subjectComments[subject.id]?.aiRewrittenComment || ''}
+                                    loadingKey={`subject-${subject.id}`}
+                                    studentName={selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'}
+                                    onRewrite={callAIRewrite}
+                                    onRewriteComplete={(result) => updateSubjectComment(subject.id, 'aiRewrittenComment', result)}
+                                    onAccept={() => acceptSubjectAIComment(subject.id, subjectComments[subject.id]?.aiRewrittenComment || '')}
+                                    isLoading={isAILoading}
+                                    aiTextareaClassName="min-h-[80px]"
+                                    onAITextChange={(text) => updateSubjectComment(subject.id, 'aiRewrittenComment', text)}
+                                  />
                                 </CardContent>
                               </Card>
                             </div>
@@ -1078,68 +962,18 @@ That's the bar.`;
                             onChange={(e) => setGeneralComment(e.target.value)}
                           />
 
-                          {generalComment && (
-                            <div className="flex items-center gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="gap-2"
-                                disabled={isAILoading['general'] || isAILoading['general-tisa']}
-                                onClick={() => callAIRewrite(generalComment, 'general', setGeneralCommentAI, 'quick', selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student')}
-                              >
-                                {isAILoading['general'] ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Sparkles className="h-3.5 w-3.5 text-accent" />
-                                )}
-                                {isAILoading['general'] ? 'Rewriting...' : 'Quick'}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="gap-2 border-tisa-purple/30 hover:bg-tisa-purple/10"
-                                disabled={isAILoading['general'] || isAILoading['general-tisa']}
-                                onClick={() => callAIRewrite(generalComment, 'general-tisa', setGeneralCommentAI, 'tisa', selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student')}
-                              >
-                                {isAILoading['general-tisa'] ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Star className="h-3.5 w-3.5 text-tisa-purple" />
-                                )}
-                                {isAILoading['general-tisa'] ? 'Rewriting...' : 'TISA'}
-                              </Button>
-                            </div>
-                          )}
-
-                          {generalCommentAI && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              className="space-y-2"
-                            >
-                              <label className="mb-1.5 flex items-center gap-2 text-sm">
-                                <Sparkles className="h-3.5 w-3.5 text-accent" />
-                                AI Polished Version
-                              </label>
-                              <Textarea
-                                className="min-h-[100px] bg-accent/5 border-accent/20"
-                                value={generalCommentAI}
-                                onChange={(e) => setGeneralCommentAI(e.target.value)}
-                              />
-                              <Button
-                                type="button"
-                                variant="default"
-                                size="sm"
-                                className="gap-2"
-                                onClick={acceptGeneralAIComment}
-                              >
-                                <Check className="h-3.5 w-3.5" />
-                                Accept AI Version
-                              </Button>
-                            </motion.div>
-                          )}
+                          <AIRewriteButtons
+                            sourceText={generalComment}
+                            aiRewrittenText={generalCommentAI}
+                            loadingKey="general"
+                            studentName={selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'}
+                            onRewrite={callAIRewrite}
+                            onRewriteComplete={setGeneralCommentAI}
+                            onAccept={acceptGeneralAIComment}
+                            isLoading={isAILoading}
+                            aiTextareaClassName="min-h-[100px]"
+                            onAITextChange={setGeneralCommentAI}
+                          />
                         </CardContent>
                       </Card>
                     </div>
