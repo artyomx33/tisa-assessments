@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, styleGuide, provider, customApiKey } = await req.json();
+    const { text, styleGuide, studentName, provider, customApiKey } = await req.json();
 
     if (!text) {
       return new Response(JSON.stringify({ error: "Text is required" }), {
@@ -20,6 +20,11 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Build student name instruction if provided
+    const studentNameInstruction = studentName 
+      ? `\n\nThe student's name is: ${studentName}. Use their name naturally in your rewrite — typically once at the start or mid-sentence, then use pronouns (he/she/they) or implicit subjects for subsequent sentences. NEVER use placeholders like [Student Name] or [Student's Name].`
+      : '';
 
     const systemPrompt = `You are a professional education report writer for TISA School.
 Your job is to completely REWRITE the teacher's comment following the school's writing style.
@@ -32,7 +37,7 @@ IMPORTANT Rules:
 - Keep similar length to the original (don't make it much longer)
 - Write in third person (e.g., "The student..." or use the student's name if provided)
 - Be specific and constructive
-- Avoid generic phrases - make it personal to the observation`;
+- Avoid generic phrases - make it personal to the observation${studentNameInstruction}`;
 
     let apiUrl: string;
     let apiKey: string;

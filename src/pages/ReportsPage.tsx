@@ -343,6 +343,13 @@ Standard comment: 2–3 sentences. If it needs more → something is wrong upstr
 Ask yourself: Would this make a parent feel seen, informed, and calmly confident?
 If yes — ship it. If not — rewrite.
 
+📛 Using the Student's Name
+- Use the student's actual name naturally — not in every sentence
+- First mention: Use the name (often works well mid-sentence)
+- Subsequent sentences: Use pronouns or omit if clear from context
+- Never use [Student's Name] or similar placeholders
+- Goal: It should read like a human wrote it for THIS child
+
 🔥 One Last Thing (Very Important)
 TISA report cards are not documents. They are mirrors.
 When a child reads this in five years, they should recognize themselves — and feel pulled forward.
@@ -353,9 +360,13 @@ That's the bar.`;
 - Make it clear and concise
 - Keep a warm, professional tone suitable for a school report
 - Preserve the original meaning and any specific observations
-- Keep it brief (2-3 sentences maximum)`;
+- Keep it brief (2-3 sentences maximum)
+- Use the student's name naturally but not repetitively
+- The name works well mid-sentence or at the start of a comment
+- Don't force the name into every sentence — use when it feels right
+- Never use placeholders like [Student Name] or [Student's Name]`;
 
-  const callAIRewrite = async (text: string, loadingKey: string, callback: (rewritten: string) => void, mode: 'quick' | 'tisa' = 'quick') => {
+  const callAIRewrite = async (text: string, loadingKey: string, callback: (rewritten: string) => void, mode: 'quick' | 'tisa' = 'quick', studentName?: string) => {
     if (!text.trim()) {
       toast.error('Please enter some text first');
       return;
@@ -391,6 +402,7 @@ That's the bar.`;
         body: {
           text,
           styleGuide,
+          studentName,
           provider,
           customApiKey: customApiKey || undefined,
         },
@@ -800,7 +812,8 @@ That's the bar.`;
                                                 entry.teacherNotes,
                                                 key,
                                                 (rewritten) => updateEntry(subject.id, point.id, 'aiRewrittenText', rewritten),
-                                                'quick'
+                                                'quick',
+                                                selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'
                                               )}
                                             >
                                               {isAILoading[key] ? (
@@ -820,7 +833,8 @@ That's the bar.`;
                                                 entry.teacherNotes,
                                                 `${key}-tisa`,
                                                 (rewritten) => updateEntry(subject.id, point.id, 'aiRewrittenText', rewritten),
-                                                'tisa'
+                                                'tisa',
+                                                selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'
                                               )}
                                             >
                                               {isAILoading[`${key}-tisa`] ? (
@@ -950,7 +964,8 @@ That's the bar.`;
                                           subjectComments[subject.id].teacherComment,
                                           `subject-${subject.id}`,
                                           (rewritten) => updateSubjectComment(subject.id, 'aiRewrittenComment', rewritten),
-                                          'quick'
+                                          'quick',
+                                          selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'
                                         )}
                                       >
                                         {isAILoading[`subject-${subject.id}`] ? (
@@ -970,7 +985,8 @@ That's the bar.`;
                                           subjectComments[subject.id].teacherComment,
                                           `subject-${subject.id}-tisa`,
                                           (rewritten) => updateSubjectComment(subject.id, 'aiRewrittenComment', rewritten),
-                                          'tisa'
+                                          'tisa',
+                                          selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student'
                                         )}
                                       >
                                         {isAILoading[`subject-${subject.id}-tisa`] ? (
@@ -1070,7 +1086,7 @@ That's the bar.`;
                                 size="sm"
                                 className="gap-2"
                                 disabled={isAILoading['general'] || isAILoading['general-tisa']}
-                                onClick={() => callAIRewrite(generalComment, 'general', setGeneralCommentAI, 'quick')}
+                                onClick={() => callAIRewrite(generalComment, 'general', setGeneralCommentAI, 'quick', selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student')}
                               >
                                 {isAILoading['general'] ? (
                                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1085,7 +1101,7 @@ That's the bar.`;
                                 size="sm"
                                 className="gap-2 border-tisa-purple/30 hover:bg-tisa-purple/10"
                                 disabled={isAILoading['general'] || isAILoading['general-tisa']}
-                                onClick={() => callAIRewrite(generalComment, 'general-tisa', setGeneralCommentAI, 'tisa')}
+                                onClick={() => callAIRewrite(generalComment, 'general-tisa', setGeneralCommentAI, 'tisa', selectedStudent?.nameUsed || selectedStudent?.firstName || 'the student')}
                               >
                                 {isAILoading['general-tisa'] ? (
                                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
