@@ -40,8 +40,12 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { StarRating } from '@/components/ui/StarRating';
+import { ExamResultsSection } from '@/components/reports/ExamResultsSection';
+import { SignatureSection } from '@/components/reports/SignatureSection';
+import { ExamResultsDisplay } from '@/components/reports/ExamResultsDisplay';
+import { SignatureDisplay } from '@/components/reports/SignatureDisplay';
 import { toast } from 'sonner';
-import type { StudentReport, ReportEntry, SubjectComment } from '@/types';
+import type { StudentReport, ReportEntry, SubjectComment, ExamResult, ReportSignature } from '@/types';
 import tisaLogo from '@/assets/tisa_logo.png';
 
 const reportFormSchema = z.object({
@@ -81,6 +85,8 @@ export default function ReportsPage() {
   const [generalComment, setGeneralComment] = useState('');
   const [viewingReport, setViewingReport] = useState<StudentReport | null>(null);
   const [generalCommentAI, setGeneralCommentAI] = useState('');
+  const [examResults, setExamResults] = useState<ExamResult[]>([]);
+  const [signatures, setSignatures] = useState<ReportSignature>({});
 
   const {
     reports,
@@ -204,6 +210,8 @@ export default function ReportsPage() {
     setSubjectComments({});
     setGeneralComment('');
     setGeneralCommentAI('');
+    setExamResults([]);
+    setSignatures({});
     setExpandedSubjects(new Set());
     form.reset({
       studentId: '',
@@ -212,6 +220,12 @@ export default function ReportsPage() {
     });
     setIsDialogOpen(true);
   };
+
+  // Get list of subjects for exam results
+  const examSubjects = selectedAssessment?.subjects
+    ?.filter(s => !s.name.includes('Learner Profile') && !s.name.includes('Work Habits') && !s.name.includes('Units of Inquiry'))
+    .map(s => s.name.replace(' - Term 1', '').replace(' - Term 2', ''))
+    .filter((v, i, a) => a.indexOf(v) === i) || [];
 
   const simulateAIRewrite = (text: string, callback: (rewritten: string) => void) => {
     if (!text.trim()) {
@@ -293,6 +307,8 @@ export default function ReportsPage() {
       entries: entryArray,
       subjectComments: subjectCommentArray,
       generalComment: generalCommentAI || generalComment,
+      examResults: examResults,
+      signatures: signatures,
       status: 'draft',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -306,6 +322,8 @@ export default function ReportsPage() {
     setSubjectComments({});
     setGeneralComment('');
     setGeneralCommentAI('');
+    setExamResults([]);
+    setSignatures({});
   };
 
   const getGradeInfo = (gradeId: string) => grades.find((g) => g.id === gradeId);
@@ -652,6 +670,22 @@ export default function ReportsPage() {
                           </CollapsibleContent>
                         </Collapsible>
                       ))}
+
+                      {/* Exam Results Section */}
+                      <ExamResultsSection
+                        examResults={examResults}
+                        onAdd={(result) => setExamResults([...examResults, { ...result, id: crypto.randomUUID() }])}
+                        onUpdate={(id, updates) => setExamResults(examResults.map(e => e.id === id ? { ...e, ...updates } : e))}
+                        onDelete={(id) => setExamResults(examResults.filter(e => e.id !== id))}
+                        subjects={examSubjects}
+                      />
+
+                      {/* Signature Section */}
+                      <SignatureSection
+                        signatures={signatures}
+                        classroomTeacherName={selectedStudent ? grades.find(g => g.id === selectedStudent.gradeId)?.classroomTeacher : ''}
+                        onSign={(role, name) => setSignatures({ ...signatures, [role]: { name, signedAt: new Date().toISOString() } })}
+                      />
 
                       {/* General Comment */}
                       <Card className="mt-6">

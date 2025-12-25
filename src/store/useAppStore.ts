@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { SchoolYear, Grade, AssessmentTemplate, Student, StudentReport, AssessmentPoint, AppSettings, TeacherAssignment } from '@/types';
+import type { SchoolYear, Grade, AssessmentTemplate, Student, StudentReport, AssessmentPoint, AppSettings, TeacherAssignment, ExamResult, ReportReflection, ReportSignature } from '@/types';
 
 interface AppState {
   // School Years
@@ -34,6 +34,13 @@ interface AppState {
   deleteReport: (id: string) => void;
   updateReportShareToken: (id: string, token: string) => void;
   getReportByShareToken: (token: string) => StudentReport | undefined;
+  
+  // Exam Results, Reflections, Signatures
+  addExamResult: (reportId: string, examResult: ExamResult) => void;
+  updateExamResult: (reportId: string, examResultId: string, updates: Partial<ExamResult>) => void;
+  deleteExamResult: (reportId: string, examResultId: string) => void;
+  updateReportReflection: (reportId: string, reflection: Partial<ReportReflection>) => void;
+  signReport: (reportId: string, role: 'classroomTeacher' | 'headOfSchool', name: string) => void;
 
   // App Settings
   appSettings: AppSettings;
@@ -605,6 +612,75 @@ export const useAppStore = create<AppState>()(
       getReportByShareToken: (token) => {
         return get().reports.find((r) => r.shareToken === token);
       },
+
+      // Exam Results
+      addExamResult: (reportId, examResult) =>
+        set((state) => ({
+          reports: state.reports.map((r) =>
+            r.id === reportId
+              ? { ...r, examResults: [...(r.examResults || []), examResult], updatedAt: new Date().toISOString() }
+              : r
+          ),
+        })),
+
+      updateExamResult: (reportId, examResultId, updates) =>
+        set((state) => ({
+          reports: state.reports.map((r) =>
+            r.id === reportId
+              ? {
+                  ...r,
+                  examResults: (r.examResults || []).map((e) =>
+                    e.id === examResultId ? { ...e, ...updates } : e
+                  ),
+                  updatedAt: new Date().toISOString(),
+                }
+              : r
+          ),
+        })),
+
+      deleteExamResult: (reportId, examResultId) =>
+        set((state) => ({
+          reports: state.reports.map((r) =>
+            r.id === reportId
+              ? {
+                  ...r,
+                  examResults: (r.examResults || []).filter((e) => e.id !== examResultId),
+                  updatedAt: new Date().toISOString(),
+                }
+              : r
+          ),
+        })),
+
+      // Reflections
+      updateReportReflection: (reportId, reflection) =>
+        set((state) => ({
+          reports: state.reports.map((r) =>
+            r.id === reportId
+              ? {
+                  ...r,
+                  reflections: { ...(r.reflections || {}), ...reflection },
+                  updatedAt: new Date().toISOString(),
+                }
+              : r
+          ),
+        })),
+
+      // Signatures
+      signReport: (reportId, role, name) =>
+        set((state) => ({
+          reports: state.reports.map((r) =>
+            r.id === reportId
+              ? {
+                  ...r,
+                  signatures: {
+                    ...(r.signatures || {}),
+                    [role]: { name, signedAt: new Date().toISOString() },
+                  },
+                  updatedAt: new Date().toISOString(),
+                }
+              : r
+          ),
+        })),
 
       // App Settings
       appSettings: defaultAppSettings,
